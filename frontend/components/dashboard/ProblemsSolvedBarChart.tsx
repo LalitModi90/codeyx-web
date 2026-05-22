@@ -35,21 +35,21 @@ export default function ProblemsSolvedBarChart({ theme }: Props) {
       <div className="h-[150px] relative mt-2 pt-2 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={bars} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-            <XAxis 
-              dataKey="label" 
-              axisLine={false} 
-              tickLine={false} 
+            <XAxis
+              dataKey="label"
+              axisLine={false}
+              tickLine={false}
               tick={{ fill: isDark ? '#6b7280' : '#9ca3af', fontSize: 8, fontWeight: 600 }}
               dy={5}
             />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
+            <YAxis
+              axisLine={false}
+              tickLine={false}
               tick={{ fill: '#6b7280', fontSize: 8 }}
               domain={[0, maxVal]}
               ticks={[0, 200, 400, 600, 800]}
             />
-            <RechartsTooltip 
+            <RechartsTooltip
               cursor={{ fill: 'transparent' }}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
@@ -62,16 +62,16 @@ export default function ProblemsSolvedBarChart({ theme }: Props) {
                 return null;
               }}
             />
-            <Bar 
-              dataKey="val" 
+            <Bar
+              dataKey="val"
               radius={[4, 4, 0, 0]}
               onMouseEnter={(_, index) => setHoveredIdx(index)}
               onMouseLeave={() => setHoveredIdx(null)}
             >
               {bars.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={hoveredIdx === index ? '#8B5CF6' : '#6d28d9'} 
+                <Cell
+                  key={`cell-${index}`}
+                  fill={hoveredIdx === index ? '#8B5CF6' : '#6d28d9'}
                   className="transition-all duration-300"
                   style={{
                     filter: hoveredIdx === index ? 'brightness(1.2) drop-shadow(0 0 8px rgba(139,92,246,0.5))' : 'none',
