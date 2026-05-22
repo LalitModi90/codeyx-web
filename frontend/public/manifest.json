@@ -1,0 +1,16 @@
+{
+  "name": "Coderyx",
+  "short_name": "Coderyx",
+  "description": "Elite Developer Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050816",
+  "theme_color": "#38BDF8",
+  "icons": [
+    {
+      "src": "/assets/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

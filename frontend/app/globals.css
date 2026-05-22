@@ -1,0 +1,201 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F8F9FC;
+  --card-bg: #FFFFFF;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --border-color: #E5E7EB;
+}
+
+.dark {
+  --background: #0F172A;
+  --card-bg: #111827;
+  --text-main: #E5E7EB;
+  --text-muted: #9CA3AF;
+  --border-color: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.glass-nav {
+  background: rgba(248, 249, 252, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-nav {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 138, 0, 0.3);
+}
+
+/* Hide scrollbar for clean dashboard look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ==========================================================================
+   Clerk Custom CSS Overrides (Hide Branding & Integrate Signup into Card)
+   ========================================================================== */
+
+/* 1. Hide "Secured by Clerk" and "Development Mode" branding elements */
+.cl-footer__branding,
+.cl-footerAction__branding,
+.cl-footer > *:not(.cl-footerAction),
+.cl-internal-b3sq6m,
+.cl-internal-157yy22,
+.cl-internal-1euzskd,
+.cl-internal-48sico,
+.cl-internal-1cb818a {
+  display: none !important;
+}
+
+/* 2. Strip card styling from the second footer card container so it is completely borderless/transparent */
+.cl-card:has(.cl-footer) {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 3. Style Clerk footer container to be transparent and sit cleanly below the main card */
+.cl-footer {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-top: none !important;
+  margin-top: 1rem !important; /* Elegant spacing below the main card */
+  padding-top: 0 !important;
+  padding-bottom: 1rem !important;
+}
+
+/* 3. Ensure the signup text matches global text size and colors */
+.cl-footerActionText {
+  color: var(--text-muted) !important;
+}
+
+.cl-footerActionLink {
+  color: #FF8A00 !important;
+  font-weight: 600 !important;
+  transition: color 0.2s ease !important;
+}
+
+.cl-footerActionLink:hover {
+  color: #FFA533 !important;
+}
+
+/* ==========================================================================
+   Project-Wide Light Mode Overrides (for hardcoded dark theme classes)
+   ========================================================================== */
+html:not(.dark) .bg-\[\#050505\] { background-color: #FFFFFF !important; }
+html:not(.dark) .bg-\[\#09090B\] { background-color: #F8F9FC !important; }
+html:not(.dark) .bg-\[\#0A0A0C\] { background-color: #F3F4F6 !important; }
+html:not(.dark) .bg-\[\#101014\] { background-color: #F3F4F6 !important; }
+html:not(.dark) .bg-\[\#111115\] { background-color: #F9FAFB !important; }
+html:not(.dark) .bg-\[\#151518\] { background-color: #F3F4F6 !important; }
+html:not(.dark) .bg-\[\#1A1A1D\] { background-color: #FFFFFF !important; }
+html:not(.dark) .bg-\[\#0F0F12\] { background-color: #FFFFFF !important; }
+html:not(.dark) .bg-\[\#09090B\]\/90 { background-color: rgba(255, 255, 255, 0.9) !important; }
+html:not(.dark) .bg-\[\#111216\]\/95 { background-color: rgba(248, 249, 252, 0.95) !important; }
+
+html:not(.dark) .text-white { color: #111827 !important; }
+html:not(.dark) .text-gray-400 { color: #4B5563 !important; }
+html:not(.dark) .text-gray-300 { color: #374151 !important; }
+html:not(.dark) .text-\[\#A1A1AA\] { color: #6B7280 !important; }
+html:not(.dark) .text-gray-200 { color: #1F2937 !important; }
+
+html:not(.dark) .border-white\/5 { border-color: #E5E7EB !important; }
+html:not(.dark) .border-white\/10 { border-color: #D1D5DB !important; }
+html:not(.dark) .border-white\/20 { border-color: #9CA3AF !important; }
+
+html:not(.dark) .bg-white\/5 { background-color: rgba(0, 0, 0, 0.05) !important; }
+html:not(.dark) .bg-white\/10 { background-color: rgba(0, 0, 0, 0.1) !important; }
+html:not(.dark) .hover\:bg-white\/10:hover { background-color: rgba(0, 0, 0, 0.1) !important; }
+html:not(.dark) .hover\:bg-white\/5:hover { background-color: rgba(0, 0, 0, 0.05) !important; }
+html:not(.dark) .hover\:text-white:hover { color: #000000 !important; }
+
+/* Dashboard Missing Classes */
+html:not(.dark) .bg-\[\#161b22\] { background-color: #F8F9FC !important; }
+html:not(.dark) .bg-\[\#0f1419\] { background-color: #FFFFFF !important; }
+html:not(.dark) .bg-\[\#0f141d\] { background-color: #FFFFFF !important; }
+html:not(.dark) .bg-white\/\[0\.01\] { background-color: rgba(0, 0, 0, 0.02) !important; }
+html:not(.dark) .hover\:bg-white\/\[0\.02\]:hover { background-color: rgba(0, 0, 0, 0.04) !important; }
+html:not(.dark) .bg-white\/\[0\.02\] { background-color: rgba(0, 0, 0, 0.02) !important; }
+html:not(.dark) .bg-white\/\[0\.03\] { background-color: rgba(0, 0, 0, 0.03) !important; }
+html:not(.dark) .bg-white\/\[0\.04\] { background-color: rgba(0, 0, 0, 0.04) !important; }
+html:not(.dark) .hover\:bg-white\/\[0\.04\]:hover { background-color: rgba(0, 0, 0, 0.06) !important; }
+html:not(.dark) .from-\[\#101014\] { 
+  --tw-gradient-from: #FFFFFF !important;
+  --tw-gradient-to: #F3F4F6 !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+html:not(.dark) .to-\[\#1a130c\] {
+  --tw-gradient-to: #F3F4F6 !important;
+}
+html:not(.dark) .border-white\/6 { border-color: #E5E7EB !important; }
+html:not(.dark) .text-\[\#FAFAFA\] { color: #111827 !important; }
+
+/* Explore Sheets & Workspace Missing Classes */
+html:not(.dark) .bg-\[\#0B0C10\] { background-color: #F8F9FC !important; }
+html:not(.dark) .bg-\[\#111216\] { background-color: #FFFFFF !important; }
+html:not(.dark) .bg-\[\#111216\]\/60 { background-color: rgba(255, 255, 255, 0.6) !important; }
+html:not(.dark) .bg-\[\#111216\]\/90 { background-color: rgba(255, 255, 255, 0.9) !important; }
+html:not(.dark) .bg-black\/20 { background-color: rgba(0, 0, 0, 0.05) !important; }
+html:not(.dark) .from-indigo-950\/40 { --tw-gradient-from: rgba(238, 242, 255, 0.9) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+html:not(.dark) .to-purple-900\/20 { --tw-gradient-to: rgba(243, 232, 255, 0.9) !important; }
+html:not(.dark) .from-\[\#101014\] { --tw-gradient-from: #FFFFFF !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+html:not(.dark) .to-\[\#140a1b\] { --tw-gradient-to: #F8F9FC !important; }
+html:not(.dark) .to-\[\#17120a\] { --tw-gradient-to: #F8F9FC !important; }
+html:not(.dark) .bg-\[\#09090B\]\/40 { background-color: rgba(255, 255, 255, 0.4) !important; }
+html:not(.dark) .bg-\[\#09090B\]\/20 { background-color: rgba(255, 255, 255, 0.2) !important; }
+
+/* Platforms, Contests, Leaderboard Missing Classes */
+html:not(.dark) .bg-\[\#050816\] { background-color: #F8F9FC !important; }
+html:not(.dark) .bg-\[\#080710\] { background-color: #F8F9FC !important; }
+html:not(.dark) .bg-\[\#0b0a12\] { background-color: #FFFFFF !important; }
+html:not(.dark) .bg-\[\#0b0a12\]\/40 { background-color: rgba(255, 255, 255, 0.4) !important; }
+html:not(.dark) .bg-\[\#0b0a12\]\/60 { background-color: rgba(255, 255, 255, 0.6) !important; }
+html:not(.dark) .bg-\[\#12111a\] { background-color: #F3F4F6 !important; }
+html:not(.dark) .bg-\[\#101014\]\/50 { background-color: rgba(255, 255, 255, 0.5) !important; }
+html:not(.dark) .bg-\[\#101014\]\/80 { background-color: rgba(255, 255, 255, 0.8) !important; }
+html:not(.dark) .bg-\[\#0f141d\]\/50 { background-color: rgba(255, 255, 255, 0.5) !important; }
+html:not(.dark) .bg-\[\#18181f\] { background-color: #F9FAFB !important; }
+html:not(.dark) .bg-black\/40 { background-color: rgba(0, 0, 0, 0.05) !important; }
+html:not(.dark) .bg-gray-800 { background-color: #F3F4F6 !important; }
+html:not(.dark) .text-gray-500 { color: #6B7280 !important; }
+html:not(.dark) .from-\[\#18181f\] { --tw-gradient-from: #F9FAFB !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; }
+html:not(.dark) .to-black { --tw-gradient-to: #F3F4F6 !important; }
+
+

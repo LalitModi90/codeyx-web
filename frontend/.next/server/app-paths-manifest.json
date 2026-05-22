@@ -1,0 +1,8 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/explore-sheets/page": "app/explore-sheets/page.js",
+  "/explore-projects/page": "app/explore-projects/page.js",
+  "/sheets/[slug]/page": "app/sheets/[slug]/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js"
+}
