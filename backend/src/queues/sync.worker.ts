@@ -1,0 +1,87 @@
+import { Worker, Job } from 'bullmq';
+import { redisClient } from '../config/redis.config';
+import { syncQueueName } from './sync.queue';
+import { emitToUser } from '../socket';
+import { PlatformStats } from '../models/platformStats.model';
+import { fetchLeetCodeStats } from '../services/leetcode.service';
+import { fetchCodeforcesStats } from '../services/codeforces.service';
+import { fetchGitHubStats } from '../services/github.service';
+import { fetchCodeChefStats } from '../services/codechef.service';
+import { fetchHackerRankStats } from '../services/hackerrank.service';
+import { fetchGFGStats } from '../services/gfg.service';
+
+export const setupWorkers = () => {
+  const worker = new Worker(
+    syncQueueName,
+    async (job: Job) => {
+      const { userId, platform, platformUsername } = job.data;
+      
+      console.log(`[Worker] LIVE fetching ${platform} for ${platformUsername || userId}`);
+      
+      let fetchedStats: any = null;
+
+      // 1. Fetch from specific platform APIs
+      if (platform === 'leetcode') {
+        fetchedStats = await fetchLeetCodeStats(platformUsername || userId);
+      } else if (platform === 'codeforces') {
+        fetchedStats = await fetchCodeforcesStats(platformUsername || userId);
+      } else if (platform === 'github') {
+        fetchedStats = await fetchGitHubStats(platformUsername || userId);
+      } else if (platform === 'codechef') {
+        fetchedStats = await fetchCodeChefStats(platformUsername || userId);
+      } else if (platform === 'hackerrank') {
+        fetchedStats = await fetchHackerRankStats(platformUsername || userId);
+      } else if (platform === 'gfg') {
+        fetchedStats = await fetchGFGStats(platformUsername || userId);
+      } else {
+        throw new Error(`Platform ${platform} fetcher not implemented yet`);
+      }
+
+      // 2. Upsert into MongoDB
+      await PlatformStats.findOneAndUpdate(
+        { userId, platform },
+        {
+          username: platformUsername || userId,
+          totalSolved: fetchedStats.totalSolved || 0,
+          rating: fetchedStats.rating || 0,
+          stats: fetchedStats,
+          lastSyncedAt: new Date(),
+        },
+        { upsert: true, new: true }
+      );
+      
+      // 3. Emit success via WebSockets
+      emitToUser(userId, 'SYNC_COMPLETE', {
+        platform,
+        status: 'success',
+        stats: {
+          totalSolved: fetchedStats.totalSolved,
+          rating: fetchedStats.rating
+        }
+      });
+
+      return { success: true, platform };
+    },
+    {
+      connection: redisClient,
+      concurrency: 5, // Process 5 syncs concurrently
+    }
+  );
+
+  worker.on('completed', (job) => {
+    console.log(`[Worker] Job ${job.id} completed successfully`);
+  });
+
+  worker.on('failed', (job, err) => {
+    console.error(`[Worker] Job ${job?.id} failed:`, err);
+    // Optionally emit failure to user
+    if (job?.data?.userId) {
+      emitToUser(job.data.userId, 'SYNC_FAILED', {
+        platform: job.data.platform,
+        error: err.message,
+      });
+    }
+  });
+
+  console.log('👷 BullMQ Workers initialized and listening...');
+};
