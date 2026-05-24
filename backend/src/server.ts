@@ -16,7 +16,9 @@ import projectRoutes from './routes/project.routes';
 import socialRoutes from './routes/social.routes';
 import contestRoutes from './routes/contest.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
+import searchRoutes from './routes/search.routes';
 import { startCronJobs } from './cron';
+import './workers/profile.worker'; // Start the BullMQ profile worker
 
 // Load env vars
 dotenv.config();
@@ -67,6 +69,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/contests', contestRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/search', searchRoutes);
 
 // Centralized Error Handling Middleware
 app.use(errorHandler);

@@ -7,6 +7,7 @@ import { fetchGitHubStats } from '../services/github.service';
 import { fetchCodeChefStats } from '../services/codechef.service';
 import { fetchHackerRankStats } from '../services/hackerrank.service';
 import { fetchGFGStats } from '../services/gfg.service';
+import { fetchAtCoderStats } from '../services/atcoder.service';
 
 // Direct sync (bypasses BullMQ - works in development without Redis)
 export const triggerPlatformSync = async (req: Request, res: Response) => {
@@ -34,6 +35,8 @@ export const triggerPlatformSync = async (req: Request, res: Response) => {
       fetchedStats = await fetchHackerRankStats(username);
     } else if (platform === 'gfg') {
       fetchedStats = await fetchGFGStats(username);
+    } else if (platform === 'atcoder') {
+      fetchedStats = await fetchAtCoderStats(username);
     } else {
       return res.status(400).json({ success: false, message: `Platform ${platform} not supported` });
     }

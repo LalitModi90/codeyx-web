@@ -1,8 +1,8 @@
-// File: F:\Codeyx\frontend\app\dashboard\platforms\leetcode\page.tsx
-import * as entry from '../../../../../../app/dashboard/platforms/leetcode/page.js'
+// File: F:\Codeyx\frontend\src\app\dashboard\platforms\leetcode\page.tsx
+import * as entry from '../../../../../../src/app/dashboard/platforms/leetcode/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../../../app/dashboard/platforms/leetcode/page.js')
+type TEntry = typeof import('../../../../../../src/app/dashboard/platforms/leetcode/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{

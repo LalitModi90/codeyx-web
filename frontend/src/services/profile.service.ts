@@ -7,8 +7,10 @@ export const profileService = {
   },
 
   // Get Profile Data
-  getProfile: async (userId: string) => {
-    return api.get(`/profile/${userId}`);
+  getProfile: async (userId: string, token: string | null = null) => {
+    return api.get(`/profile/${userId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
   },
 
   // Create Project
@@ -19,5 +21,10 @@ export const profileService = {
   // Get Projects
   getProjects: async (userId: string) => {
     return api.get(`/projects/${userId}`);
+  },
+
+  // Follow another user
+  followUser: async (payload: { userId: string; followingId: string }) => {
+    return api.post('/social/follow', payload);
   }
 };

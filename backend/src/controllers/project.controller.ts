@@ -38,3 +38,12 @@ export const getProjects = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getAllProjects = async (req: Request, res: Response) => {
+  try {
+    const projects = await Project.find({}).sort({ createdAt: -1 }).limit(50);
+    return res.status(200).json(new ApiResponse(200, projects, 'All public projects fetched'));
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

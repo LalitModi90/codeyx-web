@@ -12,10 +12,10 @@ import { motion } from 'framer-motion';
 const tabs = ['All Sheets', 'Company Wise', 'Popular', 'Quick Revision', 'Complete DSA', 'Topic Specific', 'Competitive'];
 
 const sheetsData = [
-  { slug: 'striver-a2z', title: 'Striver A2Z DSA Sheet', desc: 'Complete DSA roadmap from beginner to advanced.', problems: 455, progress: 72, icon: Code2, color: 'from-purple-600 to-indigo-600', text: 'text-purple-400', bg: 'bg-purple-500/10' },
-  { slug: 'love-babbar', title: 'Love Babbar Sheet', desc: '450 selected questions to build strong problem solving skills.', problems: 450, progress: 41, icon: Heart, color: 'from-emerald-600 to-green-600', text: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-  { slug: 'neetcode-150', title: 'Neetcode 150', desc: 'The most popular 150 LeetCode patterns for FAANG interviews.', problems: 150, progress: 35, icon: Zap, color: 'from-blue-600 to-cyan-600', text: 'text-blue-400', bg: 'bg-blue-500/10' },
-  { slug: 'blind-75', title: 'Blind 75', desc: 'Curated list of 75 Leetcode questions to land a job at top tech companies.', problems: 75, progress: 28, icon: Target, color: 'from-purple-500 to-fuchsia-600', text: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
+  { slug: 'striver-a2z', title: 'Striver A2Z DSA Sheet', desc: 'Complete DSA roadmap from beginner to advanced.', problems: 455, progress: 0, icon: Code2, color: 'from-purple-600 to-indigo-600', text: 'text-purple-400', bg: 'bg-purple-500/10' },
+  { slug: 'love-babbar', title: 'Love Babbar Sheet', desc: '450 selected questions to build strong problem solving skills.', problems: 450, progress: 0, icon: Heart, color: 'from-emerald-600 to-green-600', text: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+  { slug: 'neetcode-150', title: 'Neetcode 150', desc: 'The most popular 150 LeetCode patterns for FAANG interviews.', problems: 150, progress: 0, icon: Zap, color: 'from-blue-600 to-cyan-600', text: 'text-blue-400', bg: 'bg-blue-500/10' },
+  { slug: 'blind-75', title: 'Blind 75', desc: 'Curated list of 75 Leetcode questions to land a job at top tech companies.', problems: 75, progress: 0, icon: Target, color: 'from-purple-500 to-fuchsia-600', text: 'text-fuchsia-400', bg: 'bg-fuchsia-500/10' },
   { slug: 'top-interview-150', title: 'Top Interview 150', desc: 'Must-do questions directly recommended by top tech companies.', problems: 150, progress: 0, icon: Briefcase, color: 'from-violet-600 to-purple-600', text: 'text-violet-400', bg: 'bg-violet-500/10' },
   { slug: 'striver-sde', title: 'Striver SDE Sheet', desc: 'Top 190 questions for last-minute SDE interview preparation.', problems: 190, progress: 0, icon: Code2, color: 'from-orange-600 to-red-600', text: 'text-orange-400', bg: 'bg-orange-500/10' },
   { slug: 'dp-master', title: 'DP Master Sheet', desc: 'Handpicked DP questions to become a DP master.', problems: 120, progress: 0, icon: Brain, color: 'from-pink-600 to-rose-600', text: 'text-pink-400', bg: 'bg-pink-500/10' },
@@ -129,10 +129,10 @@ export default function ExploreSheetsPage() {
               <div className="relative w-32 h-32 flex-shrink-0">
                 <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                   <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2.5" />
-                  <circle cx="18" cy="18" r="16" fill="none" stroke="#FF8A00" strokeWidth="2.5" strokeDasharray="100" strokeDashoffset="28" strokeLinecap="round" />
+                  <circle cx="18" cy="18" r="16" fill="none" stroke="#FF8A00" strokeWidth="2.5" strokeDasharray="100" strokeDashoffset="100" strokeLinecap="round" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center drop-shadow-lg">
-                  <span className="text-3xl font-black text-white">72%</span>
+                  <span className="text-3xl font-black text-white">0%</span>
                   <span className="text-[9px] text-gray-400 font-bold uppercase mt-0.5 tracking-wide">Completed</span>
                 </div>
               </div>
@@ -141,21 +141,21 @@ export default function ExploreSheetsPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"><CheckCircle2 size={14} className="text-emerald-500"/></div>
                   <div>
-                    <div className="text-sm font-black text-white leading-none mb-1">328</div>
+                    <div className="text-sm font-black text-white leading-none mb-1">0</div>
                     <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Solved</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-[#FF8A00]/10 border border-[#FF8A00]/20 flex items-center justify-center"><Target size={14} className="text-[#FF8A00]"/></div>
                   <div>
-                    <div className="text-sm font-black text-white leading-none mb-1">127</div>
+                    <div className="text-sm font-black text-white leading-none mb-1">455</div>
                     <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Remaining</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center"><Activity size={14} className="text-blue-500"/></div>
                   <div>
-                    <div className="text-sm font-black text-white leading-none mb-1">45</div>
+                    <div className="text-sm font-black text-white leading-none mb-1">0</div>
                     <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Revision Pending</div>
                   </div>
                 </div>

@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       }
     `;
 
-    const res = await fetch('https://leetcode.com/graphql', {
+    let res = await fetch('https://leetcode.com/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,8 +54,21 @@ export async function GET(request: Request) {
       throw new Error(`LeetCode API returned ${res.status}`);
     }
 
-    const data = await res.json();
-    const user = data?.data?.matchedUser;
+    let data = await res.json();
+    let user = data?.data?.matchedUser;
+
+    if (!user && username !== username.toLowerCase()) {
+      res = await fetch('https://leetcode.com/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Referer': 'https://leetcode.com',
+        },
+        body: JSON.stringify({ query, variables: { username: username.toLowerCase() } }),
+      });
+      data = await res.json();
+      user = data?.data?.matchedUser;
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

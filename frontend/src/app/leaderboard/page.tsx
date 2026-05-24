@@ -10,18 +10,21 @@ import {
 } from 'lucide-react';
 import TopNavbar from '@/components/shared/TopNavbar';
 import Link from 'next/link';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
+import { useSocket } from '@/hooks/useSocket';
 
 export default function LeaderboardPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [activeLeaderboard, setActiveLeaderboard] = useState('Global Leaderboard');
   const [activeSubTab, setActiveSubTab] = useState('Global');
   
   // Real-time dynamic state
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [followingUsernames, setFollowingUsernames] = useState<string[]>([]);
+  const [friendUserIds, setFriendUserIds] = useState<string[]>([]);
   const [myCollege, setMyCollege] = useState('');
+  const socket = useSocket();
 
   // Sidebar Filters State
   const [timePeriod, setTimePeriod] = useState('All Time');
@@ -57,43 +60,46 @@ export default function LeaderboardPage() {
     };
     fetchMyProfile();
   }, [user?.id]);
-
-  // Load following list on mount and periodically to keep sync
+  // Load friends list on mount from backend so friends leaderboard is accurate
   React.useEffect(() => {
-    const syncFollowing = () => {
+    if (!user?.id) return;
+
+    const fetchFriends = async () => {
       try {
-        const savedFollowing = localStorage.getItem('codeyx_following_list');
-        if (savedFollowing) {
-          const parsed = JSON.parse(savedFollowing);
-          if (Array.isArray(parsed)) {
-            const usernames = parsed.map((u: any) => u.username?.toLowerCase() || u.name?.toLowerCase() || '');
-            setFollowingUsernames(usernames);
-          }
+        const token = await getToken();
+        const response = await fetch('http://localhost:5005/api/social/friends', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const resData = await response.json();
+        if (resData.success && Array.isArray(resData.data?.friendIds)) {
+          setFriendUserIds(resData.data.friendIds);
         } else {
-          setFollowingUsernames([]);
+          setFriendUserIds([]);
         }
       } catch (e) {
-        console.error('Error reading following list:', e);
+        console.error('Error fetching friends list:', e);
+        setFriendUserIds([]);
       }
     };
 
-    syncFollowing();
-    
-    // Listen to custom profileUpdated events or storage sync
-    window.addEventListener('storage', syncFollowing);
+    fetchFriends();
+  }, [user?.id]);
+
+  // Listen for socket events to update friends
+  React.useEffect(() => {
+    if (socket) {
+      socket.on('friend.list.updated', () => {
+        // Simple reload trick for now
+        window.location.reload();
+      });
+    }
+
     return () => {
-      window.removeEventListener('storage', syncFollowing);
+      if (socket) {
+        socket.off('friend.list.updated');
+      }
     };
-  }, []);
-
-  // Profile modal state
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [activeRadarUser, setActiveRadarUser] = useState<any | null>(null);
-
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  }, [socket]);
 
   // Fetch real-time leaderboard data
   React.useEffect(() => {
@@ -111,6 +117,17 @@ export default function LeaderboardPage() {
     };
     fetchLeaderboardData();
   }, []);
+
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [activeRadarUser, setActiveRadarUser] = useState<any | null>(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+
+
 
   // Open user profile modal
   const openUserProfile = async (row: any) => {
@@ -206,14 +223,12 @@ export default function LeaderboardPage() {
         const rowUsername = row.username?.toLowerCase();
         const rowUserId = row.userId;
 
-        const isFriend = followingUsernames.includes(rowUser) || followingUsernames.includes(rowUsername);
+        const isFriend = rowUserId && friendUserIds.includes(rowUserId);
         const isMe = user && (rowUserId === user.id || rowUsername === user.username?.toLowerCase() || rowUser === user.fullName?.toLowerCase());
-        
+
         return isFriend || isMe;
       });
-    }
-
-    if (activeLeaderboard === 'University Leaderboard' || activeSubTab === 'University') {
+    }    if (activeLeaderboard === 'University Leaderboard' || activeSubTab === 'University') {
       const userCollegeNormalized = myCollege?.trim().toLowerCase();
       filtered = filtered.filter(row => {
         const rowCollege = row.college?.trim().toLowerCase();
@@ -595,7 +610,7 @@ export default function LeaderboardPage() {
               { id: 'Weekly Leaderboard', icon: Calendar },
               { id: 'Contest Leaderboard', icon: Trophy },
               { id: 'University Leaderboard', icon: Building2 },
-              { id: 'Friends Leaderboard', icon: Users },
+              { id: 'Friends Leaderboard', icon: Users }
             ].map(tab => (
               <button
                 key={tab.id}

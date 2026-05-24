@@ -1,8 +1,8 @@
-// File: F:\Codeyx\frontend\app\contests\page.tsx
-import * as entry from '../../../../app/contests/page.js'
+// File: F:\Codeyx\frontend\src\app\contests\page.tsx
+import * as entry from '../../../../src/app/contests/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../app/contests/page.js')
+type TEntry = typeof import('../../../../src/app/contests/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{

@@ -107,19 +107,30 @@ export default function ConnectPlatformsModal() {
   );
   const [verifying, setVerifying] = useState<Record<string, boolean>>({});
   const [verified, setVerified] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<Record<string, string>>({});
   const [showModal, setShowModal] = useState(false);
 
   const handleChange = (key: keyof PlatformHandles, value: string) => {
-    setHandles(prev => ({ ...prev, [key]: value.trim().toLowerCase() }));
+    setHandles(prev => ({ ...prev, [key]: value }));
     // Reset verified status when changing
     setVerified(prev => ({ ...prev, [key]: false }));
+    setError(prev => ({ ...prev, [key]: '' }));
   };
 
   const verifyHandle = async (platform: PlatformConfig) => {
-    const handle = handles[platform.key];
+    let handle = handles[platform.key].trim();
     if (!handle) return;
 
+    // Extract username if URL is pasted
+    if (handle.includes('http') || handle.includes('.com') || handle.includes('.org') || handle.includes('.jp')) {
+      const parts = handle.split('/').filter(Boolean);
+      handle = parts[parts.length - 1];
+      // Auto-update the input field with the extracted handle
+      setHandles(prev => ({ ...prev, [platform.key]: handle }));
+    }
+
     setVerifying(prev => ({ ...prev, [platform.key]: true }));
+    setError(prev => ({ ...prev, [platform.key]: '' }));
     try {
       const res = await fetch(`/api/${platform.key}?username=${encodeURIComponent(handle)}`);
       const data = await res.json();
@@ -127,9 +138,11 @@ export default function ConnectPlatformsModal() {
         setVerified(prev => ({ ...prev, [platform.key]: true }));
       } else {
         setVerified(prev => ({ ...prev, [platform.key]: false }));
+        setError(prev => ({ ...prev, [platform.key]: data.error || data.message || data.details || 'User not found. Please verify your username.' }));
       }
-    } catch {
+    } catch (err: any) {
       setVerified(prev => ({ ...prev, [platform.key]: false }));
+      setError(prev => ({ ...prev, [platform.key]: 'Connection failed. Please try again.' }));
     } finally {
       setVerifying(prev => ({ ...prev, [platform.key]: false }));
     }
@@ -235,6 +248,12 @@ export default function ConnectPlatformsModal() {
                         </button>
                       ) : null}
                     </div>
+                  </div>
+                  {error[platform.key] && (
+                    <div className="mt-1 text-[10px] text-red-400 font-medium pl-10">
+                      {error[platform.key]}
+                    </div>
+                  )}
                   </div>
                 ))}
               </div>

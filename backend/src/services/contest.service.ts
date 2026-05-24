@@ -1,4 +1,4 @@
-import { withRetry } from '../utils/retry';
+import { fetchWithRetry } from '../utils/api.utils';
 import { Contest } from '../models/Contest';
 
 export const fetchAndStoreContests = async () => {
@@ -19,24 +19,11 @@ export const fetchAndStoreContests = async () => {
         }
     };
 
-    // Helper for timeout with fetch
-    const fetchWithTimeout = async (url: string, options: any = {}, timeoutMs = 5000) => {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeoutMs);
-        const response = await fetch(url, { ...options, signal: controller.signal });
-        clearTimeout(id);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-    };
-
     // 1. Fetch Kontests API (Aggregator)
     try {
-        const fetchKontests = async () => {
-            const data = await fetchWithTimeout('https://kontests.net/api/v1/all');
-            if (!data || !Array.isArray(data)) throw new Error('Invalid response');
-            return data;
-        };
-        const kData = await withRetry(fetchKontests, 2, 1000);
+        const response = await fetchWithRetry('https://kontests.net/api/v1/all', { retries: 2, timeoutMs: 5000 });
+        const kData = await response.json();
+        if (!kData || !Array.isArray(kData)) throw new Error('Invalid response');
         kData.forEach((c: any) => {
             addContest({
                 name: c.name,
@@ -54,12 +41,10 @@ export const fetchAndStoreContests = async () => {
 
     // 2. Fetch Codeforces (Official API)
     try {
-        const fetchCF = async () => {
-            const data = await fetchWithTimeout('https://codeforces.com/api/contest.list?gym=false');
-            if (!data || data.status !== 'OK') throw new Error('Invalid CF response');
-            return data.result;
-        };
-        const cfData = await withRetry(fetchCF, 2, 1000);
+        const response = await fetchWithRetry('https://codeforces.com/api/contest.list?gym=false', { retries: 2, timeoutMs: 5000 });
+        const data = await response.json();
+        if (!data || data.status !== 'OK') throw new Error('Invalid CF response');
+        const cfData = data.result;
         cfData.forEach((c: any) => {
             const startTime = new Date(c.startTimeSeconds * 1000);
             const endTime = new Date((c.startTimeSeconds + c.durationSeconds) * 1000);
@@ -79,16 +64,16 @@ export const fetchAndStoreContests = async () => {
 
     // 3. Fetch LeetCode (GraphQL)
     try {
-        const fetchLC = async () => {
-            const query = `query { allContests { title titleSlug startTime duration isVirtual } }`;
-            const data = await fetchWithTimeout('https://leetcode.com/graphql', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query })
-            });
-            return data.data.allContests;
-        };
-        const lcData = await withRetry(fetchLC, 2, 1000);
+        const query = `query { allContests { title titleSlug startTime duration isVirtual } }`;
+        const response = await fetchWithRetry('https://leetcode.com/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query }),
+            retries: 2,
+            timeoutMs: 5000
+        });
+        const data = await response.json();
+        const lcData = data.data.allContests;
         lcData.forEach((c: any) => {
             if (c.isVirtual) return; // Skip virtuals
             const startTime = new Date(c.startTime * 1000);
@@ -110,20 +95,19 @@ export const fetchAndStoreContests = async () => {
 
     // 4. Fetch CodeChef (Official JSON API)
     try {
-        const fetchCC = async () => {
-            const data = await fetchWithTimeout(
-                'https://www.codechef.com/api/list/contests/all?sort_by=START&sorting_order=asc&offset=0&mode=premium',
-                {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CodeyxBot',
-                        'Accept': 'application/json'
-                    }
-                }
-            );
-            if (!data || data.status === 'error') throw new Error('Invalid CodeChef response');
-            return data;
-        };
-        const ccData = await withRetry(fetchCC, 2, 1000);
+        const response = await fetchWithRetry(
+            'https://www.codechef.com/api/list/contests/all?sort_by=START&sorting_order=asc&offset=0&mode=premium',
+            {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) CodeyxBot',
+                    'Accept': 'application/json'
+                },
+                retries: 2,
+                timeoutMs: 5000
+            }
+        );
+        const ccData = await response.json();
+        if (!ccData || ccData.status === 'error') throw new Error('Invalid CodeChef response');
         const allCC = [...(ccData.present_contests || []), ...(ccData.future_contests || [])];
         allCC.forEach((c: any) => {
             const startStr = c.contest_start_date_iso || c.contest_start_date;
@@ -148,12 +132,9 @@ export const fetchAndStoreContests = async () => {
 
     // 5. Fetch AtCoder (Kenkoooo JSON API)
     try {
-        const fetchAC = async () => {
-            const data = await fetchWithTimeout('https://kenkoooo.com/atcoder/resources/contests.json');
-            if (!data || !Array.isArray(data)) throw new Error('Invalid AtCoder response');
-            return data;
-        };
-        const acData = await withRetry(fetchAC, 2, 1000);
+        const response = await fetchWithRetry('https://kenkoooo.com/atcoder/resources/contests.json', { retries: 2, timeoutMs: 5000 });
+        const acData = await response.json();
+        if (!acData || !Array.isArray(acData)) throw new Error('Invalid AtCoder response');
         acData.forEach((c: any) => {
             const startTime = new Date(c.start_epoch_second * 1000);
             const endTime = new Date((c.start_epoch_second + c.duration_second) * 1000);

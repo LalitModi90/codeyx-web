@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 
 export default function WorkspacePage() {
   const [activeSheets, setActiveSheets] = useState<any[]>([]);
+  const [totalSolved, setTotalSolved] = useState(0);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -25,6 +26,20 @@ export default function WorkspacePage() {
       window.addEventListener('workspaceUpdated', handleWorkspaceUpdate);
       return () => window.removeEventListener('workspaceUpdated', handleWorkspaceUpdate);
     }
+  }, []);
+
+  useEffect(() => {
+    // Fetch actual solved questions from platforms
+    import('@/lib/api').then(({ api }) => {
+      api.get('/platforms')
+        .then(res => {
+          if (res.data?.platforms) {
+            const solved = res.data.platforms.reduce((acc: number, p: any) => acc + (p.totalSolved || 0), 0);
+            setTotalSolved(solved);
+          }
+        })
+        .catch(err => console.error('Failed to load platform stats', err));
+    });
   }, []);
 
   const handleRemove = (e: React.MouseEvent, id: string) => {
@@ -76,7 +91,7 @@ export default function WorkspacePage() {
             </div>
             <div>
               <p className="text-sm font-bold text-gray-400 mb-1">Total Solved</p>
-              <p className="text-3xl font-black text-white">564</p>
+              <p className="text-3xl font-black text-white">{totalSolved}</p>
             </div>
           </div>
 
@@ -87,7 +102,7 @@ export default function WorkspacePage() {
             </div>
             <div>
               <p className="text-sm font-bold text-gray-400 mb-1">Daily Streak</p>
-              <p className="text-3xl font-black text-white">12 <span className="text-sm text-gray-500 font-medium">Days</span></p>
+              <p className="text-3xl font-black text-white">0 <span className="text-sm text-gray-500 font-medium">Days</span></p>
             </div>
           </div>
         </div>

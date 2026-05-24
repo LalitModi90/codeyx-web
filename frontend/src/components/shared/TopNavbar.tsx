@@ -3,10 +3,13 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useUser, useClerk, SignInButton, SignedOut, SignedIn } from '@clerk/nextjs';
-import { Search, Sun, Moon, Bell, ChevronDown, Briefcase, RefreshCw, Activity, ExternalLink, LogOut, User, Settings, Lock } from 'lucide-react';
+import { Search, Sun, Moon, Bell, ChevronDown, Briefcase, RefreshCw, Activity, ExternalLink, LogOut, User, Settings, Lock, Check, X } from 'lucide-react';
+import { useSocket } from '../../hooks/useSocket';
+import { useAuth } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { platformService } from '../../services/platform.service';
+import GlobalSearch from './GlobalSearch';
 
 const platformsList = [
   { id: 'leetcode', name: 'LeetCode', connected: true, score: '1257', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M13.483 0a1.374 1.374 0 0 0-.961.438L7.116 5.842l-5.7 5.7a1.373 1.373 0 0 0 0 1.942l5.7 5.7 5.406 5.406a1.374 1.374 0 0 0 1.942 0l1.01-1.01a1.374 1.374 0 0 0 0-1.942l-5.406-5.406-5.7-5.7 5.7-5.7 5.406-5.406a1.374 1.374 0 0 0 0-1.942l-1.01-1.01A1.374 1.374 0 0 0 13.483 0zM21.275 14.502a1.374 1.374 0 0 0-.961.438l-4.14 4.14a1.374 1.374 0 0 0 0 1.942l1.01 1.01a1.374 1.374 0 0 0 1.942 0l4.14-4.14a1.374 1.374 0 0 0 0-1.942l-1.01-1.01a1.374 1.374 0 0 0-.981-.438z" fill="#FFA116" /></svg> },
@@ -20,12 +23,7 @@ const platformsList = [
   { id: 'github', name: 'GitHub', connected: true, score: '2.4K', icon: <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" fill="#ffffff" /></svg> },
 ];
 
-const initialActiveSheets = [
-  { id: 'striver-a2z', name: 'Striver A2Z DSA Sheet', progress: 72 },
-  { id: 'love-babbar', name: 'Love Babbar Sheet', progress: 41 },
-  { id: 'neetcode-150', name: 'Neetcode 150', progress: 35 },
-  { id: 'blind-75', name: 'Blind 75', progress: 28 },
-];
+const initialActiveSheets: any[] = [];
 
 export default function TopNavbar() {
   const { user, isLoaded } = useUser();
@@ -37,6 +35,12 @@ export default function TopNavbar() {
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const profileMenuRef = React.useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(true);
+  
+  const { getToken } = useAuth();
+  const socket = useSocket();
+  const [friendRequests, setFriendRequests] = React.useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = React.useState(false);
+  const notificationsRef = React.useRef<HTMLDivElement>(null);
   
   const [realPlatforms, setRealPlatforms] = React.useState<any[]>([]);
   const [lastSyncedAt, setLastSyncedAt] = React.useState<Date | null>(null);
@@ -111,10 +115,74 @@ export default function TopNavbar() {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  React.useEffect(() => {
+    if (isLoaded && user) {
+      const fetchRequests = async () => {
+        try {
+          const token = await getToken();
+          const res = await fetch('http://localhost:5005/api/social/requests', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.success && data.data?.incoming) {
+            setFriendRequests(data.data.incoming);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      fetchRequests();
+    }
+  }, [isLoaded, user]);
+
+  React.useEffect(() => {
+    if (socket) {
+      socket.on('friend.request.received', () => {
+        if (user) {
+           getToken().then(token => {
+             fetch('http://localhost:5005/api/social/requests', { headers: { Authorization: `Bearer ${token}` } })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success && data.data?.incoming) setFriendRequests(data.data.incoming);
+              });
+           });
+        }
+      });
+      socket.on('friend.list.updated', () => {
+        if (user) {
+           getToken().then(token => {
+             fetch('http://localhost:5005/api/social/requests', { headers: { Authorization: `Bearer ${token}` } })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success && data.data?.incoming) setFriendRequests(data.data.incoming);
+              });
+           });
+        }
+      });
+      socket.on('friend.request.rejected', (data: any) => {
+        alert(`Your friend request to ${data.receiverName || 'that user'} was rejected.`);
+      });
+      socket.on('friend.request.revoked', (data: any) => {
+        setFriendRequests(prev => prev.filter(r => r.senderId !== data.senderId));
+      });
+    }
+    return () => {
+      if (socket) {
+        socket.off('friend.request.received');
+        socket.off('friend.list.updated');
+        socket.off('friend.request.rejected');
+        socket.off('friend.request.revoked');
+      }
+    };
+  }, [socket, user]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -175,21 +243,15 @@ export default function TopNavbar() {
     <div className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-700 ease-in-out flex justify-center w-full ${isScrolled ? 'pt-4 px-4' : 'pt-0 px-0'}`}>
       <nav className={`transition-all duration-700 ease-in-out flex items-center border ${border} backdrop-blur-xl bg-white/90 dark:bg-[#09090B]/90 ${isScrolled ? 'h-14 px-8 rounded-full shadow-2xl shadow-[#FF8A00]/10 border-gray-200 dark:border-white/10' : 'h-16 w-full px-4 rounded-none justify-between border-t-0 border-l-0 border-r-0'}`}>
       {/* Left: Branding & Search */}
-      <div className={`flex items-center gap-0 overflow-hidden transition-all duration-700 ease-in-out whitespace-nowrap ${isScrolled ? 'max-w-0 opacity-0' : 'max-w-[500px] opacity-100'}`}>
-        <Link href="/dashboard" className="flex items-center group pr-2">
+      <div className={`flex items-center gap-0 transition-all duration-700 ease-in-out whitespace-nowrap ${isScrolled ? 'max-w-0 opacity-0 overflow-hidden pointer-events-none' : 'max-w-[500px] opacity-100 overflow-visible'}`}>
+        <Link href="/dashboard" className="flex items-center group pr-2 shrink-0">
           <div className="relative h-16 w-32 transition-transform group-hover:scale-105 scale-[1.5] origin-left">
             <Image src="/assets/logo-dark-them.png" alt="Codeyx Logo" fill className="object-contain object-left" />
           </div>
         </Link>
 
-        <div className="hidden md:flex items-center relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#A1A1AA] w-4 h-4 group-focus-within:text-[#FF8A00] transition-colors" />
-          <input
-            type="text"
-            placeholder="Search any problem or topic..."
-            className={`w-64 ${cardBg} border ${border} rounded-xl py-2 pl-10 pr-3 text-xs text-black dark:text-white placeholder-[#A1A1AA] focus:outline-none focus:border-[#FF8A00]/50 transition-all`}
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-gray-500 dark:text-[#A1A1AA] font-bold border border-gray-200 dark:border-white/10 px-1.5 py-0.5 rounded">Ctrl K</span>
+        <div className="shrink-0">
+          <GlobalSearch />
         </div>
       </div>
 
@@ -281,7 +343,7 @@ export default function TopNavbar() {
                         const dbData = realPlatforms.find(p => p.platform === platform.id);
                         if (!dbData) return null; // Hide if not connected
                         
-                        const score = dbData.rating || dbData.totalSolved || dbData.stats?.publicRepos || 0;
+                        const score = dbData.totalSolved || dbData.rating || dbData.stats?.publicRepos || 0;
 
                         return (
                         <Link href={`/dashboard/platforms/${platform.id}`} key={platform.id} className="flex items-center justify-between py-1.5 hover:bg-white/[0.03] rounded-lg px-2 -mx-2 transition-colors">
@@ -362,10 +424,89 @@ export default function TopNavbar() {
             {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
           </button>
           <SignedIn>
-            <button className={`relative p-2 rounded-xl border ${border} text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all`}>
-              <Bell size={15} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8A00] rounded-full border-2 border-[#09090B]" />
-            </button>
+            <div className="relative" ref={notificationsRef}>
+              <button onClick={() => setShowNotifications(!showNotifications)} className={`relative p-2 rounded-xl border ${border} text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all`}>
+                <Bell size={15} />
+                {friendRequests.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8A00] rounded-full border-2 border-[#09090B]" />}
+              </button>
+
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-3 w-80 rounded-2xl shadow-2xl p-4 border backdrop-blur-2xl z-[99999] bg-white/95 dark:bg-[#111216]/95 border-gray-200 dark:border-white/10"
+                  >
+                    <h3 className="text-gray-900 dark:text-white font-bold text-sm mb-3">Notifications</h3>
+                    <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+                      {friendRequests.length === 0 ? (
+                        <p className="text-xs text-gray-500 text-center py-4">No new notifications</p>
+                      ) : (
+                        friendRequests.map(req => (
+                          <div key={req._id || req.requestId} className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/5 flex flex-col gap-2">
+                            <p className="text-xs text-gray-700 dark:text-gray-300">
+                              <Link href={`/profile/${req.senderId}`} className="font-bold text-black dark:text-white hover:text-[#FF8A00] transition-colors cursor-pointer">
+                                {req.senderName || req.senderId.slice(-4)}
+                              </Link> sent you a friend request.
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    const token = await getToken();
+                                    const res = await fetch('http://localhost:5005/api/social/accept', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                      body: JSON.stringify({ requestId: req._id || req.requestId })
+                                    });
+                                    if (res.ok) {
+                                      setFriendRequests(prev => prev.filter(r => (r._id || r.requestId) !== (req._id || req.requestId)));
+                                    } else {
+                                      const data = await res.json();
+                                      alert(`Accept Error: ${data.message}`);
+                                    }
+                                  } catch (error) {
+                                    alert('Network error: Could not connect to the server. Please try again.');
+                                  }
+                                }}
+                                className="flex-1 bg-[#FF8A00] hover:bg-[#FF8A00]/90 text-black text-xs font-bold py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
+                              >
+                                <Check size={12} /> Accept
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    const token = await getToken();
+                                    const res = await fetch('http://localhost:5005/api/social/reject', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                      body: JSON.stringify({ requestId: req._id || req.requestId })
+                                    });
+                                    if (res.ok) {
+                                      setFriendRequests(prev => prev.filter(r => (r._id || r.requestId) !== (req._id || req.requestId)));
+                                    } else {
+                                      const data = await res.json();
+                                      alert(`Reject Error: ${data.message}`);
+                                    }
+                                  } catch (error) {
+                                    alert('Network error: Could not connect to the server. Please try again.');
+                                  }
+                                }}
+                                className="flex-1 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 text-xs font-bold py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
+                              >
+                                <X size={12} /> Reject
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </SignedIn>
         </div>
 

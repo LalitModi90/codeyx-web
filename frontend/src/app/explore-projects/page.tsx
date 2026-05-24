@@ -11,155 +11,57 @@ import Footer from '@/components/Footer';
 import { SignedIn, SignedOut } from '@clerk/nextjs';
 import Link from 'next/link';
 
-// Mock Public Projects
-const publicProjects = [
-  { 
-    id: 1,
-    title: 'Codeyx Platform', 
-    desc: 'AI-powered coding workspace for DSA tracking, collaborative coding, and developer productivity. Features real-time syncing and beautiful visualizations.', 
-    stack: ['Next.js', 'Node.js', 'Socket.io', 'Tailwind CSS'], 
-    stars: 124, 
-    forks: 18, 
-    date: 'Updated 2 hours ago',
-    iconColor: 'text-[#FF8A00]', 
-    iconBg: 'bg-[#FF8A00]/10',
-    live: true,
-    isRepo: true,
-    author: 'codewitharyan',
-    image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: 2,
-    title: 'AI Resume Builder', 
-    desc: 'Intelligent resume builder that uses OpenAI to generate ATS-friendly bullet points and optimize your existing resume content for specific job descriptions.', 
-    stack: ['React', 'OpenAI API', 'Tailwind CSS'], 
-    stars: 45, 
-    forks: 12, 
-    date: 'Updated 2 days ago', 
-    iconColor: 'text-purple-400', 
-    iconBg: 'bg-purple-500/10', 
-    live: true, 
-    isRepo: true,
-    author: 'sarah_dev',
-    image: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: 3,
-    title: 'DevConnect Social', 
-    desc: 'A dedicated social network for developers to share snippets, find pair programming partners, and build their professional network.', 
-    stack: ['React', 'Firebase', 'Redux'], 
-    stars: 89, 
-    forks: 22, 
-    date: 'Updated 1 week ago', 
-    iconColor: 'text-pink-400', 
-    iconBg: 'bg-pink-500/10', 
-    live: true, 
-    isRepo: true,
-    author: 'mike_code',
-    image: 'https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: 4,
-    title: 'AlgoVisualizer Pro', 
-    desc: 'Interactive platform to visualize complex data structures and algorithms step by step with engaging 3D animations.', 
-    stack: ['Next.js', 'Three.js', 'TypeScript'], 
-    stars: 210, 
-    forks: 45, 
-    date: 'Updated 3 days ago', 
-    iconColor: 'text-emerald-400', 
-    iconBg: 'bg-emerald-500/10', 
-    live: true, 
-    isRepo: false,
-    author: 'leet_god',
-    image: 'https://images.unsplash.com/photo-1550439062-609e1531270e?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: 5,
-    title: 'Minimalist Note Taker', 
-    desc: 'A distraction-free markdown note-taking application designed specifically for developers and power users.', 
-    stack: ['Vue.js', 'Electron', 'Tailwind CSS'], 
-    stars: 56, 
-    forks: 8, 
-    date: 'Updated 2 weeks ago', 
-    iconColor: 'text-blue-400', 
-    iconBg: 'bg-blue-500/10', 
-    live: false, 
-    isRepo: true,
-    author: 'jessica_ui',
-    image: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: 6,
-    title: 'Crypto Dashboard Tracker', 
-    desc: 'Real-time cryptocurrency portfolio tracker with beautiful charts and integration with multiple major exchanges.', 
-    stack: ['React', 'D3.js', 'Node.js'], 
-    stars: 175, 
-    forks: 34, 
-    date: 'Updated 1 month ago', 
-    iconColor: 'text-amber-400', 
-    iconBg: 'bg-amber-500/10', 
-    live: true, 
-    isRepo: true,
-    author: 'crypto_ninja',
-    image: 'https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: 7,
-    title: 'DevBoard Kanban', 
-    desc: 'A highly customizable Kanban board with drag-and-drop features, built entirely with modern web standards.', 
-    stack: ['Next.js', 'Prisma', 'Tailwind CSS'], 
-    stars: 92, 
-    forks: 15, 
-    date: 'Updated 3 days ago', 
-    iconColor: 'text-indigo-400', 
-    iconBg: 'bg-indigo-500/10', 
-    live: true, 
-    isRepo: true,
-    author: 'ui_wizard',
-    image: 'https://images.unsplash.com/photo-1507925922837-1c264b4a91f1?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: 8,
-    title: 'Health AI Diagnostics', 
-    desc: 'A machine learning model interface that predicts potential health issues based on symptom input.', 
-    stack: ['Python', 'Flask', 'React', 'TensorFlow'], 
-    stars: 310, 
-    forks: 88, 
-    date: 'Updated 2 weeks ago', 
-    iconColor: 'text-rose-400', 
-    iconBg: 'bg-rose-500/10', 
-    live: false, 
-    isRepo: true,
-    author: 'med_hacker',
-    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=800'
-  },
-  { 
-    id: 9,
-    title: 'Retro Snake Game', 
-    desc: 'A classic snake game built with pure vanilla JavaScript and HTML5 Canvas. Fun, lightweight, and nostalgic.', 
-    stack: ['JavaScript', 'HTML5 Canvas', 'CSS'], 
-    stars: 45, 
-    forks: 12, 
-    date: 'Updated 2 months ago', 
-    iconColor: 'text-lime-400', 
-    iconBg: 'bg-lime-500/10', 
-    live: true, 
-    isRepo: true,
-    author: 'retro_coder',
-    image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=800'
-  }
-];
+import { api } from '@/lib/api';
+
+// Fallback image for projects without one
+const DEFAULT_PROJECT_IMG = 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=800';
 
 export default function ExploreProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTag, setSelectedTag] = useState('All');
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [projectsList, setProjectsList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const itemsPerPage = 6;
   
   // Interactive Modal State
   const [commentText, setCommentText] = useState('');
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+
+  React.useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await api.get('/projects/explore/all');
+        if (res.data) {
+          const formattedProjects = res.data.map((p: any) => ({
+            id: p._id,
+            title: p.title || 'Untitled Project',
+            desc: p.description || 'No description provided.',
+            stack: p.techStack || [],
+            stars: p.stars || 0,
+            forks: p.forks || 0,
+            date: new Date(p.createdAt).toLocaleDateString(),
+            iconColor: 'text-[#FF8A00]',
+            iconBg: 'bg-[#FF8A00]/10',
+            live: !!p.liveUrl,
+            isRepo: !!p.githubUrl,
+            author: p.userId || 'developer',
+            image: p.imageUrl || DEFAULT_PROJECT_IMG,
+            liveUrl: p.liveUrl,
+            githubUrl: p.githubUrl
+          }));
+          setProjectsList(formattedProjects);
+        }
+      } catch (err) {
+        console.error('Failed to load projects', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProjects();
+  }, []);
 
   const handlePostComment = () => {
     if (!commentText.trim()) return;
@@ -189,10 +91,26 @@ export default function ExploreProjectsPage() {
     setCurrentPage(0);
   };
 
-  const filteredProjects = publicProjects.filter(p => 
-    p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.stack.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredProjects = projectsList.filter(p => {
+    // 1. Text Search
+    const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      p.stack.some((s: string) => s.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      p.desc.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // 2. Tag Filter
+    let matchesTag = true;
+    if (selectedTag === 'Web') {
+      matchesTag = p.stack.some((s: string) => ['react', 'next.js', 'vue', 'html', 'node.js', 'angular', 'css'].includes(s.toLowerCase()));
+    } else if (selectedTag === 'Mobile') {
+      matchesTag = p.stack.some((s: string) => ['react native', 'flutter', 'android', 'ios', 'swift', 'kotlin'].includes(s.toLowerCase()));
+    } else if (selectedTag === 'AI') {
+      matchesTag = p.stack.some((s: string) => ['python', 'tensorflow', 'pytorch', 'openai', 'ai', 'machine learning', 'llm'].includes(s.toLowerCase()));
+    } else if (selectedTag === 'Open Source') {
+      matchesTag = p.isRepo === true;
+    }
+
+    return matchesSearch && matchesTag;
+  });
 
   const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
   const currentProjects = filteredProjects.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
@@ -250,7 +168,15 @@ export default function ExploreProjectsPage() {
           </div>
           <div className="flex gap-2">
             {['All', 'Web', 'Mobile', 'AI', 'Open Source'].map(tag => (
-              <button key={tag} className="px-4 py-2 rounded-xl bg-[#101014] border border-white/10 hover:border-white/20 text-gray-400 hover:text-white text-sm font-bold transition-all">
+              <button 
+                key={tag} 
+                onClick={() => { setSelectedTag(tag); setCurrentPage(0); }}
+                className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all ${
+                  selectedTag === tag 
+                    ? 'bg-[#FF8A00]/20 border-[#FF8A00] text-[#FF8A00] shadow-[0_0_15px_rgba(255,138,0,0.15)]' 
+                    : 'bg-[#101014] border-white/10 hover:border-white/20 text-gray-400 hover:text-white'
+                }`}
+              >
                 {tag}
               </button>
             ))}
@@ -258,8 +184,19 @@ export default function ExploreProjectsPage() {
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {currentProjects.map((proj, idx) => (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8A00]"></div>
+          </div>
+        ) : filteredProjects.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Code2 size={48} className="text-white/20 mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">No projects found</h3>
+            <p className="text-gray-500">Be the first to share your amazing work with the community!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {currentProjects.map((proj, idx) => (
             <motion.div 
               key={proj.id}
               initial={{ opacity: 0, y: 20 }}
@@ -317,6 +254,7 @@ export default function ExploreProjectsPage() {
             </motion.div>
           ))}
         </div>
+        )}
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
@@ -400,9 +338,9 @@ export default function ExploreProjectsPage() {
                     {selectedProject.live && (
                       <>
                         <SignedIn>
-                          <button className="w-full py-4 rounded-xl bg-[#FF8A00] hover:bg-[#FF8A00]/90 text-black text-sm font-black shadow-[0_0_20px_rgba(255,138,0,0.3)] flex items-center justify-center gap-2 transition-all">
+                          <a href={selectedProject.liveUrl?.startsWith('http') ? selectedProject.liveUrl : `https://${selectedProject.liveUrl}`} target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl bg-[#FF8A00] hover:bg-[#FF8A00]/90 text-black text-sm font-black shadow-[0_0_20px_rgba(255,138,0,0.3)] flex items-center justify-center gap-2 transition-all">
                             <Globe size={18} /> Open Live Preview
-                          </button>
+                          </a>
                         </SignedIn>
                         <SignedOut>
                           <Link href="/login">
@@ -417,9 +355,9 @@ export default function ExploreProjectsPage() {
                     {selectedProject.isRepo && (
                       <>
                         <SignedIn>
-                          <button className="w-full py-4 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-white text-sm font-bold flex items-center justify-center gap-2 transition-all">
+                          <a href={selectedProject.githubUrl?.startsWith('http') ? selectedProject.githubUrl : `https://${selectedProject.githubUrl}`} target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 text-white text-sm font-bold flex items-center justify-center gap-2 transition-all">
                             <Github size={18} /> View Source Code
-                          </button>
+                          </a>
                         </SignedIn>
                         <SignedOut>
                           <Link href="/login">

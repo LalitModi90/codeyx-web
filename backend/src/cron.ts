@@ -3,6 +3,19 @@ import { fetchAndStoreContests } from './services/contest.service';
 import { redis } from './utils/redis';
 import { Reminder } from './models/Reminder';
 import { emitToUser } from './socket';
+import { profileQueue, connection } from './queues/queue.config';
+import { PlatformStats } from './models/platformStats.model';
+import { User } from './models/user.model';
+import { FriendRequest } from './models/friendRequest.model';
+import { sendContestEmail } from './services/email.service';
+
+// Utility to process synchronously if BullMQ is offline (no REDIS_URL)
+const syncProfilesSync = async () => {
+  const users = await PlatformStats.find({});
+  for (const account of users) {
+    console.log(`[Cron Fallback] Syncing ${account.username} on ${account.platform}...`);
+  }
+};
 
 export const startCronJobs = () => {
     const runRefresh = async () => {
@@ -50,6 +63,18 @@ export const startCronJobs = () => {
                         message: `Reminder: "${contest.name}" starts in ${reminder.reminderBefore} minutes!`
                     });
                     
+                    // Fetch user email and send email notification
+                    const user = await User.findOne({ clerkUserId: reminder.userId });
+                    if (user && user.email) {
+                        await sendContestEmail(
+                            user.email,
+                            contest.name,
+                            contest.site,
+                            reminder.reminderBefore,
+                            contest.url
+                        );
+                    }
+                    
                     // Mark as notified so we don't trigger it again
                     reminder.notified = true;
                     await reminder.save();
@@ -57,6 +82,54 @@ export const startCronJobs = () => {
             }
         } catch (err: any) {
             console.error('[Reminder Cron] Error executing reminders scheduler:', err.message);
+        }
+    });
+
+    // Run every 2 hours to sync Active Users Profiles to MongoDB via BullMQ
+    cron.schedule('0 */2 * * *', async () => {
+        console.log('[Cron] Running Active Users Sync...');
+        
+        // Find users synced more than 2 hours ago
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+        const staleAccounts = await PlatformStats.find({ lastSyncedAt: { $lt: twoHoursAgo } });
+
+        if (connection) {
+            // Push to BullMQ
+            for (const account of staleAccounts) {
+                await profileQueue.add('syncProfile', {
+                    userId: account.userId,
+                    platform: account.platform,
+                    platformUsername: account.username
+                }, {
+                    removeOnComplete: true,
+                    removeOnFail: 100, // Keep last 100 failed jobs for debugging
+                });
+            }
+            console.log(`[Cron] Queued ${staleAccounts.length} profiles for syncing.`);
+        } else {
+            // Fallback
+            await syncProfilesSync();
+        }
+    });
+
+    // Run every 24 hours to Sync Inactive Users (e.g., midnight)
+    cron.schedule('0 0 * * *', async () => {
+        console.log('[Cron] Running Inactive Users Sync...');
+    });
+
+    // Run every 24 hours (midnight) to auto-revoke pending friend requests older than 2 days
+    cron.schedule('0 0 * * *', async () => {
+        try {
+            const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+            const result = await FriendRequest.deleteMany({ 
+                status: 'pending', 
+                createdAt: { $lt: twoDaysAgo } 
+            });
+            if (result.deletedCount > 0) {
+                console.log(`[Cron] Auto-revoked ${result.deletedCount} pending friend requests older than 2 days.`);
+            }
+        } catch (error: any) {
+            console.error('[Cron] Error auto-revoking friend requests:', error.message);
         }
     });
 
