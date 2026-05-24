@@ -1,8 +1,8 @@
-// File: F:\Codeyx\frontend\app\explore-sheets\page.tsx
-import * as entry from '../../../../app/explore-sheets/page.js'
+// File: F:\Codeyx\frontend\src\app\explore-sheets\page.tsx
+import * as entry from '../../../../src/app/explore-sheets/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../app/explore-sheets/page.js')
+type TEntry = typeof import('../../../../src/app/explore-sheets/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{
