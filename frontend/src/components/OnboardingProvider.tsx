@@ -107,11 +107,28 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     const checkDatabaseProfile = async () => {
       try {
         const response: any = await profileService.getProfile(user.id);
-        const dbProfile = response.data?.data || response.data || response;
+        
+        let dbProfile = response;
+        if (response && typeof response === 'object') {
+          if (response.data && typeof response.data === 'object') {
+            if (response.data.data && typeof response.data.data === 'object') {
+              dbProfile = response.data.data;
+            } else {
+              dbProfile = response.data;
+            }
+          }
+        }
         
         // If the database has a profile and the user has filled details, verify them
-        if (dbProfile && Object.keys(dbProfile).length > 0) {
-          const isComplete = !!(dbProfile.college || dbProfile.degree || dbProfile.skills?.length > 0);
+        if (dbProfile && Object.keys(dbProfile).length > 0 && dbProfile.userId) {
+          const isComplete = !!(
+            dbProfile.degree || 
+            dbProfile.branch || 
+            dbProfile.college || 
+            dbProfile.jobRole || 
+            dbProfile.location || 
+            (dbProfile.skills && dbProfile.skills.length > 0)
+          );
           
           if (isComplete) {
             // Existing user detected! Instate their profile and bypass onboarding.
