@@ -1,5 +1,5 @@
 import PlatformsDashboard from '../leetcode/page';
 
-export default function DynamicPlatformPage({ params }: { params: { platform: string } }) {
-  return <PlatformsDashboard params={params} />;
+export default function DynamicPlatformPage() {
+  return <PlatformsDashboard />;
 }
