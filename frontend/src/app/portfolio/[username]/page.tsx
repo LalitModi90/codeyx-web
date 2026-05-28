@@ -266,7 +266,7 @@ export default function PortfolioPage({ params }: { params: { username: string }
               <Star className="w-4 h-4 text-yellow-400" fill="currentColor" /> Featured Projects
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {featuredProjects.map(proj => (
+              {featuredProjects.map((proj: any) => (
                 <div key={proj._id} className="p-6 rounded-3xl border bg-[#0D1117]/90 border-[#FF8A00]/30 shadow-[0_15px_40px_rgba(255,138,0,0.05)] relative overflow-hidden flex flex-col gap-4 group">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF8A00]/5 rounded-full blur-2xl" />
                   <div className="flex items-start justify-between gap-3">
@@ -332,7 +332,7 @@ export default function PortfolioPage({ params }: { params: { username: string }
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {regularProjects.map(proj => (
+              {regularProjects.map((proj: any) => (
                 <div key={proj._id} className="p-5 rounded-2xl border bg-[#0D1117]/80 border-[#30363D] hover:border-[#58A6FF]/30 hover:shadow-2xl transition-all flex flex-col gap-4 group relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-[#58A6FF]/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-start justify-between gap-3">
