@@ -364,10 +364,10 @@ export default function CodeforcesPage() {
                       <div className="xl:col-span-6">
                         <ProblemsAnalytics 
                           solvedCount={solvedProblemsList.length}
-                          easyCount={solvedProblemsList.filter(p => p.rating < 1200).length}
-                          mediumCount={solvedProblemsList.filter(p => p.rating >= 1200 && p.rating < 1600).length}
-                          hardCount={solvedProblemsList.filter(p => p.rating >= 1600 && p.rating < 2000).length}
-                          eliteCount={solvedProblemsList.filter(p => p.rating >= 2000).length}
+                          easyCount={solvedProblemsList.filter((p: any) => p.rating < 1200).length}
+                          mediumCount={solvedProblemsList.filter((p: any) => p.rating >= 1200 && p.rating < 1600).length}
+                          hardCount={solvedProblemsList.filter((p: any) => p.rating >= 1600 && p.rating < 2000).length}
+                          eliteCount={solvedProblemsList.filter((p: any) => p.rating >= 2000).length}
                         />
                       </div>
                       <div className="xl:col-span-6">
@@ -422,10 +422,10 @@ export default function CodeforcesPage() {
 
                     <ProblemsAnalytics 
                       solvedCount={cfData?.totalSolved || 0}
-                      easyCount={solvedProblemsList.filter(p => p.rating < 1200).length}
-                      mediumCount={solvedProblemsList.filter(p => p.rating >= 1200 && p.rating < 1600).length}
-                      hardCount={solvedProblemsList.filter(p => p.rating >= 1600 && p.rating < 2000).length}
-                      eliteCount={solvedProblemsList.filter(p => p.rating >= 2000).length}
+                      easyCount={solvedProblemsList.filter((p: any) => p.rating < 1200).length}
+                      mediumCount={solvedProblemsList.filter((p: any) => p.rating >= 1200 && p.rating < 1600).length}
+                      hardCount={solvedProblemsList.filter((p: any) => p.rating >= 1600 && p.rating < 2000).length}
+                      eliteCount={solvedProblemsList.filter((p: any) => p.rating >= 2000).length}
                     />
 
                     <TagsMastery 
