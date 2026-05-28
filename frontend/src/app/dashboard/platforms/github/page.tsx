@@ -36,7 +36,7 @@ const getLanguageColor = (lang: string) => {
   return m[lang] || '#8b949e';
 };
 
-export const AnimatedCounter = ({ value, prefix = '' }: { value: number; prefix?: string }) => {
+const AnimatedCounter = ({ value, prefix = '' }: { value: number; prefix?: string }) => {
   const [count, setCount] = useState(0);
   useEffect(() => {
     const ctrl = animate(0, value, { duration: 1.4, ease: 'easeOut', onUpdate: v => setCount(Math.floor(v)) });
@@ -45,7 +45,7 @@ export const AnimatedCounter = ({ value, prefix = '' }: { value: number; prefix?
   return <>{prefix}{count.toLocaleString()}</>;
 };
 
-export const getLangColor = getLanguageColor;
+const getLangColor = getLanguageColor;
 
 const NAV_TABS = [
   { id: 'Overview',       icon: Home },
