@@ -6,8 +6,10 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { OnboardingProvider } from "../components/OnboardingProvider";
 import ReactQueryProvider from "../providers/ReactQueryProvider";
 import FeedbackButton from "../components/FeedbackButton";
+import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({ subsets: ["latin"] });
+
 
 export const metadata: Metadata = {
   title: "Coderyx - Developer Tracker",
@@ -38,6 +40,7 @@ export default function RootLayout({
               <OnboardingProvider>
                 {children}
                 <FeedbackButton />
+                <Analytics />
               </OnboardingProvider>
             </ReactQueryProvider>
           </ThemeProvider>
