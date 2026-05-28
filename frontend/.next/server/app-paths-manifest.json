@@ -1,7 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/explore-projects/page": "app/explore-projects/page.js",
-  "/sheets/[slug]/page": "app/sheets/[slug]/page.js",
-  "/explore-sheets/page": "app/explore-sheets/page.js",
-  "/workspace/page": "app/workspace/page.js"
-}

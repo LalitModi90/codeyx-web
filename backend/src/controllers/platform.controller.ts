@@ -1,14 +1,9 @@
 import { Request, Response } from 'express';
 import { ApiResponse } from '../utils/ApiResponse';
 import { PlatformStats } from '../models/platformStats.model';
-import { fetchLeetCodeStats } from '../services/leetcode.service';
-import { fetchCodeforcesStats } from '../services/codeforces.service';
-import { fetchGitHubStats } from '../services/github.service';
-import { fetchCodeChefStats } from '../services/codechef.service';
-import { fetchHackerRankStats } from '../services/hackerrank.service';
-import { fetchGFGStats } from '../services/gfg.service';
+import { FallbackManager } from '../services/fallbackManager';
 
-// Direct sync (bypasses BullMQ - works in development without Redis)
+// Direct sync using the high-resilience FallbackManager (bypasses Cloudflare & implements multi-tier fallback)
 export const triggerPlatformSync = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).auth?.userId || req.body.userId || 'demo-user-123';
@@ -18,25 +13,82 @@ export const triggerPlatformSync = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Platform name is required' });
     }
 
-    const username = platformUsername || userId;
-    let fetchedStats: any = null;
-
-    // Directly fetch from platform APIs (no queue needed)
-    if (platform === 'leetcode') {
-      fetchedStats = await fetchLeetCodeStats(username);
-    } else if (platform === 'codeforces') {
-      fetchedStats = await fetchCodeforcesStats(username);
-    } else if (platform === 'github') {
-      fetchedStats = await fetchGitHubStats(username);
-    } else if (platform === 'codechef') {
-      fetchedStats = await fetchCodeChefStats(username);
-    } else if (platform === 'hackerrank') {
-      fetchedStats = await fetchHackerRankStats(username);
-    } else if (platform === 'gfg') {
-      fetchedStats = await fetchGFGStats(username);
-    } else {
-      return res.status(400).json({ success: false, message: `Platform ${platform} not supported` });
+    let username = platformUsername;
+    if (!username) {
+      const existingStats = await PlatformStats.findOne({ userId, platform });
+      if (existingStats && existingStats.username) {
+        username = existingStats.username;
+      } else {
+        username = userId;
+      }
     }
+
+    // Use FallbackManager for resilient, multi-tiered live profile resolution!
+    const manager = FallbackManager.getInstance();
+    const profile = await manager.resolveProfile(platform, username, true);
+
+    // Fetch existing stats to preserve topics and submissions if new payload doesn't contain them
+    const existingStats = await PlatformStats.findOne({ userId, platform });
+    const existingTopics = existingStats?.stats?.topics || [];
+    const existingSubmissions = existingStats?.stats?.submissions || [];
+    const existingBadges = existingStats?.stats?.badges || [];
+
+    // Map fetched stats to save format — preserve ALL CodeChef-specific rich fields
+    const metadata = (profile.metadata || {}) as any;
+    const extra    = metadata.extra || {};
+
+    let avatarUrl = extra.avatar || metadata.extra?.avatar || (profile as any).avatar || '';
+
+    // Automatically upload live remote avatar to Cloudinary to prevent S3 CORS/Referrer blocks
+    if (avatarUrl && avatarUrl.startsWith('http')) {
+      try {
+        const cloudinary = require('../config/cloudinary.config').default;
+        console.log(`[Cloudinary] Uploading remote ${platform} avatar to Cloudinary...`);
+        const uploadRes = await cloudinary.uploader.upload(avatarUrl, {
+          folder: 'codeyx_avatars',
+          public_id: `${platform}_${username}`,
+          overwrite: true
+        });
+        avatarUrl = uploadRes.secure_url;
+        console.log(`[Cloudinary] Secure avatar uploaded successfully: ${avatarUrl}`);
+      } catch (err: any) {
+        console.warn(`[Cloudinary Warning] Upload failed for ${platform}:`, err.message);
+      }
+    }
+
+    const fetchedStats = {
+      username:        profile.username,
+      totalSolved:     profile.solved,
+      rating:          profile.rating,
+      highestRating:   metadata.highestRating  || 0,
+      stars:           profile.rank            || profile.stars,
+      starsNum:        profile.stars           || 0,
+      globalRank:      extra.globalRank        || 0,
+      countryRank:     extra.countryRank       || 0,
+      country:         extra.country           || '',
+      name:            extra.name              || profile.username,
+      avatar:          avatarUrl,
+      contests:        profile.contests        || 0,         // count
+      contestsHistory: Array.isArray(extra.contests) ? extra.contests : [],  // full array
+      heatmap:         Array.isArray(extra.heatmap)  ? extra.heatmap  : [],
+      partiallySolved: extra.partiallySolved   || 0,
+      fullySolved:     extra.fullySolved       || 0,
+      followers:       profile.followers       || 0,
+      easySolved:      extra.easy              || 0,
+      mediumSolved:    extra.medium            || 0,
+      hardSolved:      extra.hard              || 0,
+      // Preserve existing topics/submissions/badges/languages that come from other sources
+      topics:     (metadata.topics      && metadata.topics.length      > 0) ? metadata.topics      : existingTopics,
+      submissions:(metadata.submissions && metadata.submissions.length  > 0) ? metadata.submissions : existingSubmissions,
+      badges:     (metadata.badges      && metadata.badges.length       > 0) ? metadata.badges      : existingBadges,
+      languages:  (metadata.languages   && metadata.languages.length   > 0) ? metadata.languages   : (existingStats?.stats?.languages || []),
+      metadata: {
+        ...metadata,
+        extra: {
+          ...extra
+        }
+      }
+    };
 
     // Save to MongoDB
     const saved = await PlatformStats.findOneAndUpdate(
@@ -44,14 +96,25 @@ export const triggerPlatformSync = async (req: Request, res: Response) => {
       {
         username,
         totalSolved: fetchedStats.totalSolved || 0,
-        rating: fetchedStats.rating || 0,
-        stats: fetchedStats,
+        rating:      fetchedStats.rating      || 0,
+        stats:       fetchedStats,
         lastSyncedAt: new Date(),
       },
       { upsert: true, new: true }
     );
 
-    console.log(`[Sync] ${platform} synced for ${userId}: ${fetchedStats.totalSolved || 0} solved`);
+
+    console.log(`[Sync] ${platform} successfully synced for ${userId}: ${fetchedStats.totalSolved || 0} solved (via ${profile.metadata?.resolutionDetails?.strategyUsed || 'aggregator'})`);
+
+    // If platform is github, auto sync repos as projects
+    if (platform === 'github') {
+      const repos = fetchedStats.metadata?.extra?.repositories || [];
+      const { syncGithubReposAsProjects } = require('./project.controller');
+      // Run in background so sync returns immediately
+      syncGithubReposAsProjects(userId, username, repos).catch((err: any) => {
+        console.error('[Sync Project Auto Import Background Error]', err.message);
+      });
+    }
 
     return res.status(200).json(
       new ApiResponse(200, saved, `${platform} synced successfully`)
@@ -93,6 +156,23 @@ export const getAllPlatformStats = async (req: Request, res: Response) => {
     
     return res.status(200).json(
       new ApiResponse(200, stats, `Fetched all platforms for user`)
+    );
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const disconnectPlatform = async (req: Request, res: Response) => {
+  try {
+    const { platform, userId } = req.body;
+    if (!platform || !userId) {
+      return res.status(400).json({ success: false, message: 'Platform and userId are required' });
+    }
+
+    await PlatformStats.findOneAndDelete({ userId, platform });
+
+    return res.status(200).json(
+      new ApiResponse(200, null, `${platform} disconnected successfully`)
     );
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });

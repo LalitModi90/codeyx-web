@@ -8,6 +8,7 @@ import {
   TrendingUp, Code2, Flame, Award, Medal, Crown, Star,
   Search, Shield, Activity, BarChart3, ChevronLeft, ChevronRight, Check, X, ExternalLink, Lock
 } from 'lucide-react';
+import { ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip as RechartsTooltip } from 'recharts';
 import TopNavbar from '@/components/shared/TopNavbar';
 import Link from 'next/link';
 import { useUser } from '@clerk/nextjs';
@@ -22,6 +23,7 @@ export default function LeaderboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [followingUsernames, setFollowingUsernames] = useState<string[]>([]);
   const [myCollege, setMyCollege] = useState('');
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   // Sidebar Filters State
   const [timePeriod, setTimePeriod] = useState('All Time');
@@ -46,7 +48,7 @@ export default function LeaderboardPage() {
     if (!user?.id) return;
     const fetchMyProfile = async () => {
       try {
-        const response = await fetch(`http://localhost:5005/api/profile/${user.id}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/profile/${user.id}`);
         const resData = await response.json();
         if (resData.success && resData.data?.college) {
           setMyCollege(resData.data.college);
@@ -100,7 +102,7 @@ export default function LeaderboardPage() {
     const fetchLeaderboardData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('http://localhost:5005/api/leaderboard');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard`);
         const resData = await response.json();
         if (resData.success) setLeaderboardData(resData.data);
       } catch (err) {
@@ -119,7 +121,7 @@ export default function LeaderboardPage() {
     if (!row.radarStats) {
       setProfileLoading(true);
       try {
-        const res = await fetch(`http://localhost:5005/api/leaderboard/user/${row.userId}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard/user/${row.userId}`);
         const data = await res.json();
         if (data.success) setSelectedUser({ ...row, ...data.data });
       } catch (e) {
@@ -308,6 +310,10 @@ export default function LeaderboardPage() {
   const displayData = fullData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const handleTabChange = (tabId: string) => {
+    if (tabId === 'Friends Leaderboard') {
+      setShowComingSoonModal(true);
+      return;
+    }
     setActiveLeaderboard(tabId);
     setCurrentPage(1);
   };
@@ -326,6 +332,32 @@ export default function LeaderboardPage() {
         <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-[#FF8A00]/5 blur-[120px]" />
         <div className="absolute top-[20%] right-[-5%] w-[30vw] h-[30vw] rounded-full bg-blue-900/10 blur-[120px]" />
       </div>
+
+      {/* ====== COMING SOON MODAL ====== */}
+      {showComingSoonModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#111216] border border-white/10 rounded-2xl p-6 shadow-2xl max-w-sm w-full text-center relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF8A00]/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="w-16 h-16 bg-[#FF8A00]/10 border border-[#FF8A00]/20 rounded-full flex items-center justify-center mx-auto mb-4 text-[#FF8A00]">
+              <Users size={32} />
+            </div>
+            <h3 className="text-xl font-extrabold text-white mb-2">Friends Leaderboard</h3>
+            <p className="text-sm text-gray-400 mb-6 flex flex-col items-center gap-2">
+              This feature is currently under development and will be available very soon. Stay tuned!
+            </p>
+            <button 
+              onClick={() => setShowComingSoonModal(false)}
+              className="bg-white/10 hover:bg-white/15 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all w-full"
+            >
+              Got it
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       {/* ====== USER PROFILE MODAL ====== */}
       <AnimatePresence>
@@ -402,98 +434,73 @@ export default function LeaderboardPage() {
 
               {/* Main body: radar chart + platform breakdown */}
               <div className="grid grid-cols-2 gap-0 divide-x divide-white/5">
-                {/* Radar Chart — Real Data */}
-                <div className="p-6">
-                  <p className="text-[10px] font-extrabold text-gray-600 uppercase tracking-widest mb-4">Performance Radar</p>
-                  {profileLoading ? (
-                    <div className="flex items-center justify-center h-48">
-                      <div className="w-7 h-7 rounded-full border-2 border-[#FF8A00]/20 border-t-[#FF8A00] animate-spin" />
-                    </div>
-                  ) : (selectedUser.hasData && selectedUser.radarStats) ? (() => {
-                    const r = selectedUser.radarStats;
-                    const center = 50;
-                    const maxR = 38;
-                    const angles = [-90, -18, 54, 126, 198];
-                    const toXY = (pct: number, angle: number) => {
-                      const rad = (angle * Math.PI) / 180;
-                      const dist = (pct / 100) * maxR;
-                      return { x: center + dist * Math.cos(rad), y: center + dist * Math.sin(rad) };
-                    };
-                    const axes = [
-                      { label: 'Problems', color: '#22c55e', value: r.problemSolving },
-                      { label: 'Speed',    color: '#ef4444', value: r.speed },
-                      { label: 'Accuracy', color: '#3b82f6', value: r.accuracy },
-                      { label: 'Consistency', color: '#eab308', value: r.consistency },
-                      { label: 'Contest',  color: '#d946ef', value: r.contest },
-                    ];
-                    const outerPts = angles.map(a => toXY(100, a));
-                    const midPts   = angles.map(a => toXY(50, a));
-                    const innerPts = angles.map(a => toXY(25, a));
-                    const dataPts  = axes.map((ax, idx) => toXY(ax.value, angles[idx]));
-                    const toSvg = (pts: { x: number; y: number }[]) => pts.map(p => `${p.x},${p.y}`).join(' ');
-                    return (
-                      <div className="flex flex-col gap-4">
-                        <div className="relative w-full aspect-square max-w-[180px] mx-auto">
-                          <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
-                            <polygon points={toSvg(outerPts)} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" />
-                            <polygon points={toSvg(midPts)}   fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
-                            <polygon points={toSvg(innerPts)} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.5" />
-                            {outerPts.map((p, i) => (
-                              <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
-                            ))}
-                            <polygon points={toSvg(dataPts)} fill="rgba(255,138,0,0.13)" stroke="#FF8A00" strokeWidth="1.2" />
-                            {dataPts.map((p, i) => (
-                              <circle key={i} cx={p.x} cy={p.y} r="2" fill="#FF8A00" />
-                            ))}
-                          </svg>
-                          {axes.map((ax, i) => {
-                            const lp = toXY(128, angles[i]);
-                            return (
-                              <div key={i} className="absolute flex flex-col items-center text-center pointer-events-none" style={{
-                                left: `${lp.x}%`, top: `${lp.y}%`, transform: 'translate(-50%,-50%)'
-                              }}>
-                                <span className="text-[8px] font-bold text-gray-500 leading-none">{ax.label}</span>
-                                <span className="text-[9px] font-black leading-none" style={{ color: ax.color }}>{ax.value}%</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Premium 5-Factor Skill Breakdown */}
-                        <div className="flex flex-col gap-2 mt-1 bg-white/[0.01] border border-white/5 rounded-xl p-3">
-                          <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Detailed Metrics</p>
-                          <div className="flex flex-col gap-2.5">
-                            {axes.map((ax, idx) => (
-                              <div key={idx} className="flex flex-col gap-1">
-                                <div className="flex items-center justify-between text-[10px] font-bold">
-                                  <span className="text-gray-400">{ax.label}</span>
-                                  <span style={{ color: ax.color }}>{ax.value}%</span>
+                  {/* Radar Chart — Recharts */}
+                  <div className="p-6">
+                    <p className="text-[10px] font-extrabold text-gray-600 uppercase tracking-widest mb-4">Performance Radar</p>
+                    {profileLoading ? (
+                      <div className="flex items-center justify-center h-48">
+                        <div className="w-7 h-7 rounded-full border-2 border-[#FF8A00]/20 border-t-[#FF8A00] animate-spin" />
+                      </div>
+                    ) : (selectedUser.hasData && selectedUser.radarStats) ? (() => {
+                      const r = selectedUser.radarStats;
+                      const radarData = [
+                        { subject: 'Problems', value: r.problemSolving || 0, fullMark: 100 },
+                        { subject: 'Speed',    value: r.speed || 0, fullMark: 100 },
+                        { subject: 'Accuracy', value: r.accuracy || 0, fullMark: 100 },
+                        { subject: 'Consistency', value: r.consistency || 0, fullMark: 100 },
+                        { subject: 'Contest',  value: r.contest || 0, fullMark: 100 },
+                      ];
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <ResponsiveContainer width="100%" height={180}>
+                            <RadarChart data={radarData} margin={{ top: 5, right: 20, bottom: 5, left: 20 }}>
+                              <PolarGrid stroke="rgba(255,255,255,0.07)" />
+                              <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 9, fontWeight: 700 }} />
+                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                              <Radar dataKey="value" stroke="#FF8A00" fill="#FF8A00" fillOpacity={0.18} strokeWidth={1.5} dot={{ r: 2.5, fill: '#FF8A00', strokeWidth: 0 }} />
+                              <RechartsTooltip
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    return (
+                                      <div className="bg-[#0d0d12] border border-[#FF8A00]/30 rounded-lg px-2.5 py-1.5 text-[10px] shadow-2xl">
+                                        <span className="text-[#FF8A00] font-black">{payload[0].payload.subject}</span>
+                                        <span className="text-white font-bold ml-2">{payload[0].value}%</span>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                }}
+                              />
+                            </RadarChart>
+                          </ResponsiveContainer>
+                          {/* Skill bars */}
+                          <div className="flex flex-col gap-2 bg-white/[0.01] border border-white/5 rounded-xl p-3">
+                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Detailed Metrics</p>
+                            {radarData.map((ax, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <span className="text-[9px] text-gray-400 font-bold w-20 shrink-0">{ax.subject}</span>
+                                <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full bg-[#FF8A00] transition-all duration-500" style={{ width: `${ax.value}%` }} />
                                 </div>
-                                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                  <div className="h-full rounded-full transition-all duration-500" style={{
-                                    width: `${ax.value}%`,
-                                    backgroundColor: ax.color
-                                  }} />
-                                </div>
+                                <span className="text-[9px] text-[#FF8A00] font-black w-8 text-right">{ax.value}%</span>
                               </div>
                             ))}
                           </div>
                         </div>
+                      );
+                    })() : (
+                      <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center">
+                          <Activity size={22} className="text-gray-700" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-gray-500 mb-1">No Stats Available</p>
+                          <p className="text-[10px] text-gray-700 font-semibold leading-relaxed max-w-[140px]">
+                            Connect platforms to generate this chart
+                          </p>
+                        </div>
                       </div>
-                    );
-                  })() : (
-                    <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center">
-                        <Activity size={22} className="text-gray-700" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-gray-500 mb-1">No Stats Available</p>
-                        <p className="text-[10px] text-gray-700 font-semibold leading-relaxed max-w-[140px]">
-                          Connect platforms to generate this chart
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                    )}
                 </div>
 
                 {/* Platform breakdown */}
@@ -1202,97 +1209,36 @@ export default function LeaderboardPage() {
             </div>
 
             {activeRadarUser ? (
-              <div className="flex flex-col items-center py-2 gap-4">
-                <div className="relative w-44 h-44 overflow-visible">
-                  <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
-                    {/* Grid Polygons */}
-                    <polygon points={getGridPoints(0.25)} fill="none" stroke="white" strokeWidth="0.3" strokeDasharray="1,1" className="opacity-20" />
-                    <polygon points={getGridPoints(0.5)} fill="none" stroke="white" strokeWidth="0.3" strokeDasharray="1,1" className="opacity-30" />
-                    <polygon points={getGridPoints(0.75)} fill="none" stroke="white" strokeWidth="0.3" strokeDasharray="1,1" className="opacity-40" />
-                    <polygon points={getGridPoints(1.0)} fill="none" stroke="white" strokeWidth="0.5" className="opacity-50" />
-
-                    {/* Spokes */}
-                    {[0, 1, 2, 3, 4].map(i => {
-                      const coords = getSpokeCoords(i);
-                      return (
-                        <line 
-                          key={i} 
-                          x1="50" y1="50" 
-                          x2={coords.x} y2={coords.y} 
-                          stroke="white" 
-                          strokeWidth="0.3" 
-                          className="opacity-30" 
-                        />
-                      );
-                    })}
-
-                    {/* Data Polygon */}
-                    <polygon 
-                      points={points} 
-                      fill="url(#radarGlow)" 
-                      stroke="#FF8A00" 
-                      strokeWidth="1.2" 
-                      className="drop-shadow-[0_0_8px_rgba(255,138,0,0.5)]" 
+              <div className="flex flex-col items-center py-2 gap-3">
+                <ResponsiveContainer width="100%" height={200}>
+                  <RadarChart data={[
+                    { subject: 'DSA',    value: values[0], fullMark: 100 },
+                    { subject: 'Contest', value: values[1], fullMark: 100 },
+                    { subject: 'Speed',  value: values[2], fullMark: 100 },
+                    { subject: 'Accuracy', value: values[3], fullMark: 100 },
+                    { subject: 'Consistency', value: values[4], fullMark: 100 },
+                  ]} margin={{ top: 5, right: 20, bottom: 5, left: 20 }}>
+                    <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 8, fontWeight: 700 }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar dataKey="value" stroke="#FF8A00" fill="#FF8A00" fillOpacity={0.15} strokeWidth={1.5}
+                      dot={{ r: 2.5, fill: '#FF8A00', strokeWidth: 0 }}
                     />
-
-                    {/* Data Points */}
-                    {values.map((val, i) => {
-                      const r = (val / 100) * 40;
-                      const x = 50 + r * Math.cos(angles[i]);
-                      const y = 50 + r * Math.sin(angles[i]);
-                      return (
-                        <circle 
-                          key={i} 
-                          cx={x} cy={y} 
-                          r="1.8" 
-                          fill="white" 
-                          stroke="#FF8A00" 
-                          strokeWidth="0.8" 
-                          className="cursor-pointer hover:r-2.5 transition-all"
-                        />
-                      );
-                    })}
-
-                    {/* Labels */}
-                    {['DSA', 'Contest', 'Speed', 'Accuracy', 'Consistency'].map((label, i) => {
-                      const labelAngles = angles;
-                      const r = 47; // Push outside the pentagon
-                      const x = 50 + r * Math.cos(labelAngles[i]);
-                      const y = 50 + r * Math.sin(labelAngles[i]);
-                      
-                      // Fine-tune label text alignment
-                      let textAnchor = 'middle';
-                      if (Math.cos(labelAngles[i]) > 0.1) textAnchor = 'start';
-                      else if (Math.cos(labelAngles[i]) < -0.1) textAnchor = 'end';
-
-                      let dy = '0.35em';
-                      if (labelAngles[i] === -Math.PI / 2) dy = '-0.2em';
-                      else if (labelAngles[i] > 0 && labelAngles[i] < Math.PI) dy = '0.9em';
-
-                      return (
-                        <text 
-                          key={label}
-                          x={x} y={y} 
-                          textAnchor={textAnchor}
-                          dy={dy}
-                          fontSize="5" 
-                          fontWeight="bold"
-                          className="fill-gray-400 font-sans tracking-wide"
-                        >
-                          {label} ({values[i]})
-                        </text>
-                      );
-                    })}
-
-                    {/* Gradients */}
-                    <defs>
-                      <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#FF8A00" stopOpacity="0.1" />
-                        <stop offset="100%" stopColor="#FF8A00" stopOpacity="0.4" />
-                      </radialGradient>
-                    </defs>
-                  </svg>
-                </div>
+                    <RechartsTooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-[#0d0d12] border border-[#FF8A00]/30 rounded-lg px-2 py-1 text-[9px] shadow-2xl">
+                              <span className="text-[#FF8A00] font-black">{payload[0].payload.subject}</span>
+                              <span className="text-white font-bold ml-1.5">{payload[0].value}</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
                 <div className="text-center">
                   <p className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider">
                     {activeRadarUser.user}'s Skill Profile
@@ -1301,12 +1247,8 @@ export default function LeaderboardPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 gap-4 text-center">
-                <div className="relative w-36 h-36 opacity-20 pointer-events-none select-none">
-                  <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
-                    <polygon points="50,10 90,35 75,85 25,85 10,35" fill="none" stroke="white" strokeWidth="0.8" />
-                    <polygon points="50,25 75,42 65,70 35,70 25,42" fill="none" stroke="white" strokeWidth="0.6" />
-                    <polygon points="50,40 60,48 55,58 45,58 40,48" fill="none" stroke="white" strokeWidth="0.4" />
-                  </svg>
+                <div className="w-14 h-14 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-center opacity-40">
+                  <BarChart3 size={28} className="text-gray-500" />
                 </div>
                 <div>
                   <p className="text-xs font-black text-gray-400 mb-1">Click Any User to View</p>

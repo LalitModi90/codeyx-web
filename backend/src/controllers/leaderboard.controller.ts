@@ -39,26 +39,47 @@ function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
 
     if (contestsCount === 0 && totalSolved > 0) contestsCount = Math.ceil(totalSolved / 25);
 
-    // ── 5 Radar Axes (0–100) ───────────────────────────────────────────────
+    // ── 1. Competitive Programming Score (Max 70 points) ───────────────────
     const maxRating   = 10000;
     const maxSolved   = 3000;
     const maxContests = 500;
 
-    const problemSolving = Math.min(100, Math.round((totalSolved   / maxSolved)   * 100));
-    const contestAxis    = Math.min(100, Math.round((combinedRating / maxRating)   * 100));
-    const speed          = Math.min(100, Math.round(40 + (totalSolved / 100)));
-    const accuracy       = Math.min(100, Math.round(50 + (combinedRating / 200)));
-    const consistency    = Math.min(100, Math.round(((contestsCount / maxContests) * 100) + 20));
+    const contestRatingScore = Math.min(35, (combinedRating / maxRating) * 35); // 35%
+    const problemsSolvedScore = Math.min(20, (totalSolved / maxSolved) * 20); // 20%
+    const accuracyScore = Math.min(10, ((totalSolved > 0 ? 80 : 0) / 100) * 10); // 10% (Placeholder baseline 80% accuracy)
+    const consistencyScore = Math.min(3, (contestsCount / maxContests) * 3); // 3%
+    const speedScore = Math.min(2, ((totalSolved > 0 ? 70 : 0) / 100) * 2); // 2% (Placeholder baseline 70% speed)
 
-    // ── Weighted Codeyx Score (primary rank metric, 0–100) ─────────────────
-    // Contest Rating/Ranking (45% - Absolute Highest Weight!) | Problem Solving (25%) | Accuracy (15%) | Consistency (10%) | Speed (5%)
-    const codeyxScore = Math.round(
-        contestAxis    * 0.45 +
-        problemSolving * 0.25 +
-        accuracy       * 0.15 +
-        consistency    * 0.10 +
-        speed          * 0.05
-    );
+    const competitiveScore = contestRatingScore + problemsSolvedScore + accuracyScore + consistencyScore + speedScore;
+
+    // ── 2. Developer Engineering Score (Max 20 points) ─────────────────────
+    // Placeholders based on GitHub connection status until full metrics are built
+    const hasGithub = Object.keys(platformBreakdown).includes('github') || userProfile?.socialLinks?.github;
+    const githubContributions = hasGithub ? 5 : 0; // out of 8%
+    const openSourceActivity = hasGithub ? 3 : 0; // out of 5%
+    const liveProjects = (userProfile?.projects?.length || 0) > 0 ? 3 : 0; // out of 4%
+    const portfolioQuality = (userProfile?.bio?.length || 0) > 20 ? 2 : 0; // out of 3%
+
+    const developerScore = githubContributions + openSourceActivity + liveProjects + portfolioQuality;
+
+    // ── 3. Reputation & Community Score (Max 10 points) ────────────────────
+    // Placeholders until community features are built
+    const projectRatings = 2; // out of 4%
+    const verifiedReviews = 1; // out of 2%
+    const communityEngagement = 1; // out of 2%
+    const followersReputation = 1; // out of 2%
+
+    const reputationScore = projectRatings + verifiedReviews + communityEngagement + followersReputation;
+
+    // ── Final Global Codeyx Score (0-100) ──────────────────────────────────
+    const codeyxScore = Math.round(competitiveScore + developerScore + reputationScore);
+
+    // Old Radar Stats (Mapping for frontend compatibility)
+    const problemSolving = Math.min(100, Math.round((problemsSolvedScore / 20) * 100));
+    const contestAxis    = Math.min(100, Math.round((contestRatingScore / 35) * 100));
+    const speed          = Math.min(100, Math.round((speedScore / 2) * 100));
+    const accuracy       = Math.min(100, Math.round((accuracyScore / 10) * 100));
+    const consistency    = Math.min(100, Math.round((consistencyScore / 3) * 100));
 
     const hasConnected = Object.keys(platformBreakdown).length > 0;
     const hasData      = hasConnected && (totalSolved > 0 || combinedRating > 0);

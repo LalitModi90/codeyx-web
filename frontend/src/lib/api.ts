@@ -9,11 +9,25 @@ export const api = axios.create({
   },
 });
 
-// Request Interceptor: Attach tokens if needed (Clerk handles its own tokens, but if we use JWT from backend)
+// Request Interceptor: Attach tokens if needed
 api.interceptors.request.use(
-  (config) => {
-    // You can attach tokens here if bypassing Clerk and using custom JWT
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  async (config) => {
+    let token = null;
+
+    // Try to get Clerk token if available in the browser
+    if (typeof window !== 'undefined' && (window as any).Clerk?.session) {
+      try {
+        token = await (window as any).Clerk.session.getToken();
+      } catch (err) {
+        console.error('Error fetching Clerk token', err);
+      }
+    }
+
+    // Fallback to local storage
+    if (!token && typeof window !== 'undefined') {
+      token = localStorage.getItem('token');
+    }
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

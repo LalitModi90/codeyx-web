@@ -5,28 +5,20 @@ import { Github, ExternalLink, FolderGit2, ArrowRight } from 'lucide-react';
 import { SignedIn, SignedOut } from '@clerk/nextjs';
 import Link from 'next/link';
 
-const projects = [
-  {
-    title: "Algorithm Visualizer",
-    desc: "Interactive visualization tool for sorting and pathfinding algorithms.",
-    tags: ["React", "TypeScript", "Tailwind"],
-    featured: true,
-  },
-  {
-    title: "Code Collab Editor",
-    desc: "Real-time collaborative code editor with WebSockets.",
-    tags: ["Next.js", "Node.js", "Socket.io"],
-    featured: false,
-  },
-  {
-    title: "LeetCode Stats Card",
-    desc: "Dynamically generated GitHub readme stats for LeetCode profiles.",
-    tags: ["Vercel", "Go", "GraphQL"],
-    featured: false,
-  }
-];
+import { projectService } from '@/services/project.service';
 
 export default function Projects() {
+  const [projects, setProjects] = React.useState<any[]>([]);
+  
+  React.useEffect(() => {
+    projectService.getExploreProjects().then((res) => {
+      if (res.data && Array.isArray(res.data)) {
+        // Take the top 3 latest or highest rated projects
+        setProjects(res.data.slice(0, 3));
+      }
+    }).catch(err => console.error("Error fetching projects", err));
+  }, []);
+
   return (
     <section id="projects" className="py-20 px-4 max-w-7xl mx-auto">
       <div className="mb-12 text-center md:text-left">
@@ -45,7 +37,7 @@ export default function Projects() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: idx * 0.1 }}
-            className={`group relative bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-6 overflow-hidden card-hover flex flex-col ${proj.featured ? 'md:col-span-2 lg:col-span-2 bg-gradient-to-br from-[var(--card-bg)] to-primary/5' : ''}`}
+            className={`group relative bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-6 overflow-hidden card-hover flex flex-col ${idx === 0 ? 'md:col-span-2 lg:col-span-2 bg-gradient-to-br from-[var(--card-bg)] to-primary/5' : ''}`}
           >
             {/* Glow effect on hover in dark mode */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/10 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -56,12 +48,12 @@ export default function Projects() {
               </div>
               <div className="flex gap-2 items-center">
                 <SignedIn>
-                  <button className="p-2 rounded-full hover:bg-[var(--border-color)] transition-colors text-[var(--text-muted)] hover:text-white" title="View Source">
+                  <a href={proj.githubUrl || proj.github || '#'} target="_blank" rel="noreferrer" className="p-2 rounded-full hover:bg-[var(--border-color)] transition-colors text-[var(--text-muted)] hover:text-white" title="View Source">
                     <Github size={20} />
-                  </button>
-                  <button className="p-2 rounded-full hover:bg-[var(--border-color)] transition-colors text-[var(--text-muted)] hover:text-white" title="Live Demo">
+                  </a>
+                  <a href={proj.liveUrl || proj.link || '#'} target="_blank" rel="noreferrer" className="p-2 rounded-full hover:bg-[var(--border-color)] transition-colors text-[var(--text-muted)] hover:text-white" title="Live Demo">
                     <ExternalLink size={20} />
-                  </button>
+                  </a>
                 </SignedIn>
                 <SignedOut>
                   <Link href="/login">
@@ -74,10 +66,10 @@ export default function Projects() {
             </div>
 
             <h3 className="text-xl font-bold mb-2 relative z-10">{proj.title}</h3>
-            <p className="text-[var(--text-muted)] mb-6 flex-grow relative z-10">{proj.desc}</p>
+            <p className="text-[var(--text-muted)] mb-6 flex-grow relative z-10">{proj.description || proj.desc}</p>
             
             <div className="flex flex-wrap gap-2 relative z-10">
-              {proj.tags.map(tag => (
+              {(proj.techStack || proj.tags || []).slice(0, 4).map((tag: string) => (
                 <span key={tag} className="text-xs font-medium px-3 py-1 rounded-full bg-[var(--border-color)] text-[var(--text-main)]">
                   {tag}
                 </span>

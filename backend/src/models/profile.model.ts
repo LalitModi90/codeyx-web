@@ -9,9 +9,11 @@ export interface IProfile extends Document {
   branch: string;
   year: string;
   degree: string;
+  jobRole: string;
   portfolio: string;
   email: string;
   bannerUrl: string;
+  skills: string[];
   socialLinks: {
     linkedin?: string;
     twitter?: string;
@@ -36,9 +38,11 @@ const profileSchema = new Schema<IProfile>(
     branch: { type: String, default: '' },
     year: { type: String, default: '' },
     degree: { type: String, default: '' },
+    jobRole: { type: String, default: '' },
     portfolio: { type: String, default: '' },
     email: { type: String, default: '' },
     bannerUrl: { type: String, default: '' },
+    skills: { type: [String], default: [] },
     socialLinks: {
       linkedin: { type: String, default: '' },
       twitter: { type: String, default: '' },

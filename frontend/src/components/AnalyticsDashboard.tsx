@@ -6,6 +6,18 @@ import { SignedOut } from '@clerk/nextjs';
 import Link from 'next/link';
 
 export default function AnalyticsDashboard() {
+  const [topUser, setTopUser] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data.length > 0) {
+          setTopUser(data.data[0]);
+        }
+      })
+      .catch(err => console.error("Error fetching top user", err));
+  }, []);
   return (
     <section id="analytics" className="py-20 px-4 bg-[var(--card-bg)]/50 border-y border-[var(--border-color)]">
       <div className="max-w-7xl mx-auto">
@@ -26,7 +38,10 @@ export default function AnalyticsDashboard() {
             <div className="absolute top-0 right-0 p-8 opacity-10 text-primary">
               <LineChart size={120} />
             </div>
-            <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Target className="text-primary"/> Contest Ratings Graph</h3>
+            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <Target className="text-primary"/> 
+              {topUser ? `${topUser.user}'s Codeyx Score (Global #1)` : 'Contest Ratings Graph'}
+            </h3>
             <div className="h-48 flex items-end gap-2 mt-auto relative z-10 border-b border-l border-[var(--border-color)] p-4">
               {/* Mock Graph Bars */}
               {[40, 60, 45, 80, 65, 90, 75, 100].map((h, i) => (
@@ -43,9 +58,9 @@ export default function AnalyticsDashboard() {
             >
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 rounded-full bg-orange-500/10 text-orange-500"><Flame size={24}/></div>
-                <span className="text-[var(--text-muted)] font-medium">Active Days</span>
+                <span className="text-[var(--text-muted)] font-medium">Problems Solved</span>
               </div>
-              <div className="text-4xl font-bold">284 <span className="text-sm font-normal text-green-500 ml-2">🔥 Streak</span></div>
+              <div className="text-4xl font-bold">{topUser ? topUser.problems.toLocaleString() : '284'} <span className="text-sm font-normal text-green-500 ml-2">Total</span></div>
             </motion.div>
 
             <motion.div 
@@ -53,18 +68,18 @@ export default function AnalyticsDashboard() {
               className="flex-1 bg-[var(--background)] border border-[var(--border-color)] rounded-3xl p-6 flex flex-col justify-center relative overflow-hidden group"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 group-hover:opacity-100 opacity-0 transition-opacity"></div>
-              <h4 className="text-[var(--text-muted)] mb-2 font-medium">Topic Mastery</h4>
+              <h4 className="text-[var(--text-muted)] mb-2 font-medium">Radar Mastery</h4>
               <div className="space-y-3">
                 <div>
-                  <div className="flex justify-between text-sm mb-1"><span>Dynamic Prog.</span><span>78%</span></div>
+                  <div className="flex justify-between text-sm mb-1"><span>Problem Solving</span><span>{topUser ? topUser.radarStats?.problemSolving || 0 : 78}%</span></div>
                   <div className="w-full h-2 bg-[var(--border-color)] rounded-full overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: '78%' }}></div>
+                    <div className="h-full bg-primary" style={{ width: `${topUser ? topUser.radarStats?.problemSolving || 0 : 78}%` }}></div>
                   </div>
                 </div>
                 <div>
-                  <div className="flex justify-between text-sm mb-1"><span>Graphs</span><span>62%</span></div>
+                  <div className="flex justify-between text-sm mb-1"><span>Accuracy</span><span>{topUser ? topUser.radarStats?.accuracy || 0 : 62}%</span></div>
                   <div className="w-full h-2 bg-[var(--border-color)] rounded-full overflow-hidden">
-                    <div className="h-full bg-primary/70" style={{ width: '62%' }}></div>
+                    <div className="h-full bg-primary/70" style={{ width: `${topUser ? topUser.radarStats?.accuracy || 0 : 62}%` }}></div>
                   </div>
                 </div>
               </div>

@@ -8,23 +8,89 @@ import {
   CheckSquare, Square, Play, RotateCcw, FolderGit2, Bot, Calendar, Download, Eye,
   Globe, Trophy, Flame, CheckCircle2, Target, Code2, Layers,
   MonitorSmartphone, Briefcase, ChevronRight, Activity, TrendingUp,
-  Zap, BookOpen
+  Zap, BookOpen, Crown, User, Plus, Trash2, Sparkles, Rocket
 } from 'lucide-react';
 import ActivityHeatmap from '../../components/dashboard/ActivityHeatmap';
 import TopNavbar from '../../components/shared/TopNavbar';
 import { useSocket } from '../../hooks/useSocket';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { platformService } from '../../services/platform.service';
+import { progressService } from '../../services/progress.service';
 
 export default function CodeyxDashboard() {
   const [theme, setTheme] = useState('dark');
+  const [showMockModal, setShowMockModal] = useState(false);
+  const [showExtensionModal, setShowExtensionModal] = useState(false);
   const { user, isLoaded } = useUser();
   const queryClient = useQueryClient();
   const socket = useSocket();
 
+  type Task = { id: number; text: string; done: boolean; };
+  const [checklist, setChecklist] = useState<Task[]>([]);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [isChecklistLoaded, setIsChecklistLoaded] = useState(false);
+
   const userName = isLoaded && user?.firstName ? user.firstName : 'Lalit';
   const userImage = isLoaded && user?.imageUrl ? user.imageUrl : null;
   const userId = user?.id || 'demo-user-123'; // fallback for testing
+
+  React.useEffect(() => {
+    if (!userId) return;
+    const storageKey = `codeyx_daily_tasks_${userId}`;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    try {
+      const savedData = localStorage.getItem(storageKey);
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        if (parsed.date !== todayStr) {
+          // New day! Reset checkboxes but keep tasks
+          const resetTasks = parsed.tasks.map((t: Task) => ({ ...t, done: false }));
+          setChecklist(resetTasks);
+          localStorage.setItem(storageKey, JSON.stringify({ date: todayStr, tasks: resetTasks }));
+        } else {
+          setChecklist(parsed.tasks || []);
+        }
+      } else {
+        // Default tasks
+        const defaultTasks = [
+          { id: 1, text: 'Solve 2 DSA problems', done: false },
+          { id: 2, text: 'Sync platform stats', done: false },
+        ];
+        setChecklist(defaultTasks);
+        localStorage.setItem(storageKey, JSON.stringify({ date: todayStr, tasks: defaultTasks }));
+      }
+    } catch (e) {
+      console.error('Error loading checklist', e);
+    }
+    setIsChecklistLoaded(true);
+  }, [userId]);
+
+  const saveChecklist = (newTasks: Task[]) => {
+    setChecklist(newTasks);
+    if (!userId) return;
+    const storageKey = `codeyx_daily_tasks_${userId}`;
+    const todayStr = new Date().toISOString().split('T')[0];
+    localStorage.setItem(storageKey, JSON.stringify({ date: todayStr, tasks: newTasks }));
+  };
+
+  const toggleTask = (id: number) => {
+    const updated = checklist.map(t => (t.id === id ? { ...t, done: !t.done } : t));
+    saveChecklist(updated);
+  };
+
+  const addTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskText.trim()) return;
+    const newTask = { id: Date.now(), text: newTaskText.trim(), done: false };
+    saveChecklist([...checklist, newTask]);
+    setNewTaskText('');
+  };
+
+  const deleteTask = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    saveChecklist(checklist.filter(t => t.id !== id));
+  };
 
   // Listen to Realtime Events
   React.useEffect(() => {
@@ -60,6 +126,32 @@ export default function CodeyxDashboard() {
     enabled: !!userId,
   });
 
+  // Fetch Leaderboard Top 3
+  const { data: top3Leaderboard, isLoading: top3Loading } = useQuery({
+    queryKey: ['leaderboardTop3'],
+    queryFn: async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          // Sort exactly like the contest leaderboard logic: descending by rawCombinedRating or rating
+          const sorted = data.data.sort((a: any, b: any) => (b.rawCombinedRating || b.rating || 0) - (a.rawCombinedRating || a.rating || 0));
+          return sorted.slice(0, 3);
+        }
+        return [];
+      } catch (e) {
+        return [];
+      }
+    },
+  });
+
+  // Fetch REAL Codeyx Progress Stats
+  const { data: progressStatsRes, isLoading: progressStatsLoading } = useQuery({
+    queryKey: ['progressStats', userId],
+    queryFn: () => progressService.getProgressStats(),
+    enabled: !!userId,
+  });
+
   // Fixed data paths: interceptor returns response.data → ApiResponse → .data = PlatformStats
   const lcData = leetcodeRes?.data;
   const lcTotalSolved = lcData?.totalSolved || 0;
@@ -81,7 +173,19 @@ export default function CodeyxDashboard() {
 
   // Compute streak from LC calendar
   const calObj: Record<string, number> = (() => { try { return JSON.parse(lcCalendar); } catch { return {}; } })();
-  const sortedDays = Object.keys(calObj).map(Number).sort((a, b) => b - a);
+  
+  // Merge exact daily tasks completion into the heatmap real-time
+  const mergedCalendarObj = { ...calObj };
+  const completedTasksCount = checklist.filter(t => t.done).length;
+  if (completedTasksCount > 0) {
+    const d = new Date();
+    // LeetCode calendar uses UTC midnight timestamps
+    const midnightUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000;
+    mergedCalendarObj[midnightUTC.toString()] = (mergedCalendarObj[midnightUTC.toString()] || 0) + completedTasksCount;
+  }
+  const mergedCalendarStr = JSON.stringify(mergedCalendarObj);
+
+  const sortedDays = Object.keys(mergedCalendarObj).map(Number).sort((a, b) => b - a);
   let streak = 0;
   const today = Math.floor(Date.now() / 86400000);
   for (let i = 0; i < sortedDays.length; i++) {
@@ -89,19 +193,30 @@ export default function CodeyxDashboard() {
     if (dayDiff === i || dayDiff === i + 1) streak++;
     else break;
   }
-  const totalActiveDays = Object.values(calObj).filter(v => v > 0).length;
+  const totalActiveDays = Object.values(mergedCalendarObj).filter(v => v > 0).length;
 
-  // Skill score: weighted avg of available ratings
-  const skillScore = lcRating || ccRating
-    ? Math.min(100, Math.round(((lcRating || 0) * 0.5 + (ccRating || 0) * 0.5) / 20))
-    : 0;
+  // Skill score: weighted avg of available ratings, fallback to problems solved
+  let skillScore = 0;
+  if (lcRating > 0 || ccRating > 0) {
+    skillScore = Math.min(100, Math.round(((lcRating || 0) * 0.5 + (ccRating || 0) * 0.5) / 20));
+  } else if (lcTotalSolved > 0) {
+    skillScore = Math.min(100, Math.round(lcTotalSolved / 10));
+  }
 
-  // Topic breakdown from LC easy/medium/hard
-  const totalLC = lcTotalSolved || 1;
-  const topicData = lcTotalSolved > 0 ? [
-    { name: 'Easy', val: Math.round((lcEasy / totalLC) * 100), color: 'text-emerald-400', stroke: '#34d399' },
-    { name: 'Medium', val: Math.round((lcMedium / totalLC) * 100), color: 'text-amber-400', stroke: '#fbbf24' },
-    { name: 'Hard', val: Math.round((lcHard / totalLC) * 100), color: 'text-rose-500', stroke: '#f43f5e' },
+  // Topic breakdown from Codeyx Platform Progress
+  const codeyxStats = progressStatsRes?.data;
+  const easyTotal = codeyxStats?.easy?.total || 1;
+  const mediumTotal = codeyxStats?.medium?.total || 1;
+  const hardTotal = codeyxStats?.hard?.total || 1;
+
+  const easySolvedCodeyx = codeyxStats?.easy?.solved || 0;
+  const mediumSolvedCodeyx = codeyxStats?.medium?.solved || 0;
+  const hardSolvedCodeyx = codeyxStats?.hard?.solved || 0;
+
+  const topicData = codeyxStats && codeyxStats.total > 0 ? [
+    { name: 'Easy', val: Math.round((easySolvedCodeyx / easyTotal) * 100), color: 'text-emerald-400', stroke: '#34d399', solved: easySolvedCodeyx },
+    { name: 'Medium', val: Math.round((mediumSolvedCodeyx / mediumTotal) * 100), color: 'text-amber-400', stroke: '#fbbf24', solved: mediumSolvedCodeyx },
+    { name: 'Hard', val: Math.round((hardSolvedCodeyx / hardTotal) * 100), color: 'text-rose-500', stroke: '#f43f5e', solved: hardSolvedCodeyx },
   ] : [];
 
   // Theme classes
@@ -135,8 +250,8 @@ export default function CodeyxDashboard() {
                 </div>
 
                 <div className="relative z-10">
-                  <h1 className="text-3xl font-extrabold text-white mb-1 flex items-center gap-2">
-                    Good Evening, {userName}! <span className="animate-wave inline-block origin-[70%_70%]">👋</span>
+                  <h1 className="text-3xl font-extrabold text-white mb-1 flex items-center gap-3">
+                    Good Evening, {userName}! <Sparkles className="text-[#FF8A00] animate-pulse" size={28} />
                   </h1>
                   <p className="text-[#A1A1AA] text-sm">Consistency today, success tomorrow.</p>
                 </div>
@@ -190,12 +305,48 @@ export default function CodeyxDashboard() {
               <div className={`${cardBg} border ${border} rounded-[24px] p-6 shadow-xl flex flex-col`}>
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="font-bold text-sm text-white">Daily Checklist</h3>
-                  <span className="text-[10px] font-bold text-[#A1A1AA]">Coming soon</span>
+                  <span className="text-[10px] font-bold text-[#FF8A00]">{checklist.filter(t => t.done).length}/{checklist.length} done</span>
                 </div>
-                <div className="flex-1 flex flex-col items-center justify-center py-6 gap-3">
-                  <CheckSquare size={28} className="text-white/10" />
-                  <p className="text-xs text-gray-600 text-center">Your daily tasks will appear here.<br />Feature coming soon.</p>
+                <div className="flex-1 flex flex-col gap-3 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
+                  {checklist.length === 0 ? (
+                    <div className="text-center text-gray-500 text-xs py-4">No tasks for today. Add one below!</div>
+                  ) : (
+                    checklist.map(task => (
+                      <div 
+                        key={task.id} 
+                        onClick={() => toggleTask(task.id)}
+                        className="flex items-center gap-3 cursor-pointer group justify-between"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className={`w-5 h-5 shrink-0 rounded-md border flex items-center justify-center transition-all ${task.done ? 'bg-[#FF8A00] border-[#FF8A00] text-[#101014]' : 'bg-transparent border-white/20 text-transparent group-hover:border-[#FF8A00]/50'}`}>
+                            <CheckSquare size={12} strokeWidth={4} className={task.done ? 'opacity-100' : 'opacity-0'} />
+                          </div>
+                          <span className={`text-xs font-bold transition-colors truncate ${task.done ? 'text-gray-500 line-through' : 'text-gray-300 group-hover:text-white'}`}>
+                            {task.text}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={(e) => deleteTask(task.id, e)}
+                          className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-500 transition-all shrink-0 p-1"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
+                <form onSubmit={addTask} className="mt-4 flex gap-2">
+                  <input 
+                    type="text" 
+                    value={newTaskText}
+                    onChange={(e) => setNewTaskText(e.target.value)}
+                    placeholder="Add a new daily task..." 
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#FF8A00]/50 transition-all"
+                  />
+                  <button type="submit" disabled={!newTaskText.trim()} className="bg-[#FF8A00] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-500 text-white rounded-lg w-8 h-8 flex items-center justify-center shrink-0 transition-all">
+                    <Plus size={14} strokeWidth={3} />
+                  </button>
+                </form>
               </div>
             </div>
 
@@ -211,9 +362,11 @@ export default function CodeyxDashboard() {
                 <div className="flex-1 flex flex-col items-center justify-center py-8 gap-3">
                   <Play size={28} className="text-white/10" />
                   <p className="text-xs text-gray-600 text-center">Start a sheet from<br /><span className="text-[#FF8A00]">Explore Sheets</span> to track progress here.</p>
-                  <button className="mt-2 bg-[#FF8A00]/10 hover:bg-[#FF8A00]/20 text-[#FF8A00] border border-[#FF8A00]/20 rounded-xl px-4 py-2 text-xs font-bold transition-all">
-                    Browse Sheets
-                  </button>
+                  <Link href="/explore-sheets">
+                    <button className="mt-2 bg-[#FF8A00]/10 hover:bg-[#FF8A00]/20 text-[#FF8A00] border border-[#FF8A00]/20 rounded-xl px-4 py-2 text-xs font-bold transition-all">
+                      Browse Sheets
+                    </button>
+                  </Link>
                 </div>
               </div>
 
@@ -225,36 +378,49 @@ export default function CodeyxDashboard() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { icon: Layers, title: 'Explore Sheets', desc: '450+ curated sheets', color: 'text-blue-400' },
+                    { icon: Layers, title: 'Explore Sheets', desc: '450+ curated sheets', color: 'text-blue-400', link: '/explore-sheets' },
                     { icon: RotateCcw, title: 'Sync Platforms', desc: 'LeetCode, GFG & more', color: 'text-orange-400', action: 'sync' },
-                    { icon: BookOpen, title: 'My Notes', desc: 'Your personal notes', color: 'text-pink-400' },
-                    { icon: FolderGit2, title: 'Projects', desc: 'Track and build projects', color: 'text-emerald-400' },
-                    { icon: Bot, title: 'AI Mock Interview', desc: 'Practice & improve', color: 'text-cyan-400' },
-                    { icon: Play, title: 'Resume Last Problem', desc: 'Binary Tree Inorder Traversal', color: 'text-green-400' },
-                  ].map((actionItem, i) => (
-                    <div
-                      key={i}
-                      onClick={() => {
-                        if (actionItem.action === 'sync') {
-                          platformService.syncPlatform('leetcode', userId, user?.username || '');
-                          platformService.syncPlatform('github', userId, user?.username || '');
-                          platformService.syncPlatform('codechef', userId, user?.username || '');
-                        }
-                      }}
-                      className={`${cardBg} border ${border} rounded-[16px] p-4 flex items-center justify-between cursor-pointer group hover:border-[#FF8A00]/30 hover:bg-white/[0.02] transition-all`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg bg-white/5 border border-white/5 group-hover:scale-110 transition-transform ${actionItem.color}`}>
-                          <actionItem.icon size={16} />
+                    { icon: BookOpen, title: 'My Notes', desc: 'Your personal notes', color: 'text-pink-400', link: '/notes' },
+                    { icon: FolderGit2, title: 'Projects', desc: 'Track and build projects', color: 'text-emerald-400', link: '/explore-projects' },
+                    { icon: Bot, title: 'AI Mock Interview', desc: 'Practice & improve', color: 'text-cyan-400', action: 'coming_soon' },
+                    { icon: Play, title: 'Resume Last Problem', desc: 'Binary Tree Inorder Traversal', color: 'text-green-400', link: '/explore-sheets' },
+                  ].map((actionItem, i) => {
+                    const content = (
+                      <div
+                        onClick={() => {
+                          if (actionItem.action === 'sync') {
+                            platformService.syncPlatform('leetcode', userId, user?.username || '');
+                            platformService.syncPlatform('github', userId, user?.username || '');
+                            platformService.syncPlatform('codechef', userId, user?.username || '');
+                          } else if (actionItem.action === 'coming_soon') {
+                            setShowMockModal(true);
+                          }
+                        }}
+                        className={`${cardBg} border ${border} rounded-[16px] p-4 flex items-center justify-between cursor-pointer group hover:border-[#FF8A00]/30 hover:bg-white/[0.02] transition-all h-full`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg bg-white/5 border border-white/5 group-hover:scale-110 transition-transform ${actionItem.color}`}>
+                            <actionItem.icon size={16} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-200 group-hover:text-white transition-colors">{actionItem.title}</p>
+                            <p className="text-[10px] text-[#A1A1AA] mt-0.5">{actionItem.desc}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-200 group-hover:text-white transition-colors">{actionItem.title}</p>
-                          <p className="text-[10px] text-[#A1A1AA] mt-0.5">{actionItem.desc}</p>
-                        </div>
+                        <ChevronRight size={14} className="text-gray-600 group-hover:text-[#FF8A00] transition-colors" />
                       </div>
-                      <ChevronRight size={14} className="text-gray-600 group-hover:text-[#FF8A00] transition-colors" />
-                    </div>
-                  ))}
+                    );
+                    
+                    return actionItem.link ? (
+                      <Link href={actionItem.link} key={i} className="block h-full">
+                        {content}
+                      </Link>
+                    ) : (
+                      <div key={i} className="block h-full">
+                        {content}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -271,10 +437,10 @@ export default function CodeyxDashboard() {
                 </select>
               </div>
 
-              {lcLoading ? (
+              {progressStatsLoading ? (
                 <div className="flex gap-4">{[1, 2, 3].map(i => <div key={i} className="flex-1 h-28 bg-white/5 animate-pulse rounded-2xl" />)}</div>
               ) : topicData.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-xs">Sync LeetCode to see topic breakdown</div>
+                <div className="text-center py-8 text-gray-500 text-xs">Start solving problems in sheets to see breakdown</div>
               ) : (
                 <div className="grid grid-cols-3 gap-4">
                   {topicData.map((topic, i) => (
@@ -289,7 +455,7 @@ export default function CodeyxDashboard() {
                           <span className="text-[11px] font-black text-white">{topic.val}%</span>
                         </div>
                       </div>
-                      <span className={`text-[9px] font-bold ${topic.color}`}>{lcTotalSolved > 0 ? `${i === 0 ? lcEasy : i === 1 ? lcMedium : lcHard} solved` : ''}</span>
+                      <span className={`text-[9px] font-bold ${topic.color}`}>{topic.solved > 0 ? `${topic.solved} solved` : '0 solved'}</span>
                     </div>
                   ))}
                 </div>
@@ -307,7 +473,7 @@ export default function CodeyxDashboard() {
                   </div>
                   {/* Reuse existing component, wrap to fit styling if needed */}
                   <div className="mt-4 opacity-90 hover:opacity-100 transition-opacity">
-                    <ActivityHeatmap submissionCalendar={lcCalendar} theme="dark" />
+                    <ActivityHeatmap submissionCalendar={mergedCalendarStr} theme="dark" />
                   </div>
                 </div>
 
@@ -335,7 +501,7 @@ export default function CodeyxDashboard() {
                 <h3 className="font-bold text-sm text-white flex items-center gap-2">
                   <Trophy size={16} className="text-[#FF8A00]" /> Upcoming Contests
                 </h3>
-                <span className="text-[10px] font-bold text-[#FF8A00] cursor-pointer hover:underline">View all</span>
+                <Link href="/contests" className="text-[10px] font-bold text-[#FF8A00] cursor-pointer hover:underline">View all</Link>
               </div>
 
               <div className="space-y-4">
@@ -357,9 +523,11 @@ export default function CodeyxDashboard() {
                 ))}
               </div>
 
-              <button className="w-full mt-5 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2">
-                View Calendar <Calendar size={14} />
-              </button>
+              <Link href="/contests">
+                <button className="w-full mt-5 py-2.5 rounded-xl border border-white/10 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2">
+                  View Calendar <Calendar size={14} />
+                </button>
+              </Link>
             </div>
 
             {/* 6️⃣ Portfolio Analytics */}
@@ -367,11 +535,31 @@ export default function CodeyxDashboard() {
               <div className="flex items-center justify-between mb-5">
                 <h3 className="font-bold text-sm text-white">Portfolio Analytics</h3>
                 <select aria-label="Portfolio Analytics time range" className="bg-transparent border-none text-[10px] text-gray-500 font-bold outline-none cursor-pointer">
-                  <option>This month</option>
+                  <option className="bg-[#101014] text-white">This month</option>
+                  <option className="bg-[#101014] text-white">Last month</option>
+                  <option className="bg-[#101014] text-white">This year</option>
+                  <option className="bg-[#101014] text-white">All time</option>
                 </select>
               </div>
 
               <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">LeetCode Rating</span>
+                  {lcLoading ? (
+                    <div className="h-4 w-12 bg-white/10 animate-pulse rounded"></div>
+                  ) : (
+                    <span className="text-xs font-bold text-[#FF8A00]">{lcRating > 0 ? Math.round(lcRating) : '—'}</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">LeetCode Solved</span>
+                  {lcLoading ? (
+                    <div className="h-4 w-12 bg-white/10 animate-pulse rounded"></div>
+                  ) : (
+                    <span className="text-xs font-bold text-[#FF8A00]">{lcTotalSolved > 0 ? lcTotalSolved : '—'}</span>
+                  )}
+                </div>
+                <div className="h-px bg-white/5 w-full" />
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-400">CodeChef Rating</span>
                   {ccLoading ? (
@@ -396,7 +584,7 @@ export default function CodeyxDashboard() {
                 <div className="h-px bg-white/5 w-full" />
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400">Skill Score</span>
+                    <span className="text-xs text-gray-400">Codeyx Skill Score</span>
                     <span className="text-xs font-bold text-[#FF8A00]">{skillScore > 0 ? `${skillScore} / 100` : 'Sync to calculate'}</span>
                   </div>
                   <div className="h-1.5 bg-[#09090B] rounded-full overflow-hidden border border-white/5">
@@ -421,7 +609,10 @@ export default function CodeyxDashboard() {
                 Sync submissions instantly. Install the extension to auto-track LeetCode & Codeforces.
               </p>
 
-              <button className="w-full bg-[#FF8A00] hover:bg-orange-500 text-white rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(255,138,0,0.3)] transition-all relative z-10">
+              <button 
+                onClick={() => setShowExtensionModal(true)} 
+                className="w-full bg-[#FF8A00] hover:bg-orange-500 text-white rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(255,138,0,0.3)] transition-all relative z-10"
+              >
                 Install Extension <MonitorSmartphone size={12} />
               </button>
             </div>
@@ -430,18 +621,117 @@ export default function CodeyxDashboard() {
             <div className={`${cardBg} border ${border} rounded-[24px] p-6 shadow-xl`}>
               <div className="flex items-center justify-between mb-5">
                 <h3 className="font-bold text-sm text-white">Leaderboard Preview</h3>
-                <a href="/leaderboard" className="text-[10px] font-bold text-[#FF8A00] cursor-pointer hover:underline">View all</a>
+                <Link href="/leaderboard" className="text-[10px] font-bold text-[#FF8A00] cursor-pointer hover:underline">View all</Link>
               </div>
-              <div className="flex flex-col items-center justify-center py-8 gap-3">
-                <Trophy size={28} className="text-white/10" />
-                <p className="text-xs text-gray-600 text-center">Leaderboard loads after syncing<br />your platforms.</p>
-                <a href="/leaderboard" className="mt-2 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold transition-all">View Full Leaderboard</a>
+              <div className="flex flex-col gap-3">
+                {top3Loading ? (
+                  <div className="flex flex-col gap-2 py-4">
+                    {[1, 2, 3].map(i => <div key={i} className="h-12 bg-white/5 animate-pulse rounded-xl" />)}
+                  </div>
+                ) : (top3Leaderboard && top3Leaderboard.length > 0) ? (
+                  <div className="flex flex-col gap-3 py-2">
+                    {top3Leaderboard.map((u: any, idx: number) => {
+                      const isFirst = idx === 0;
+                      return (
+                        <div key={idx} className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl p-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isFirst ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' : 'bg-white/10 text-white'}`}>
+                              #{idx + 1}
+                            </div>
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-800">
+                              {u.avatarUrl ? <img src={u.avatarUrl} alt={u.user} className="w-full h-full object-cover" /> : <User size={16} className="text-gray-400 m-auto mt-2" />}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold text-white leading-tight">{u.user}</span>
+                              <span className="text-[10px] text-gray-500">@{u.username || u.user}</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-xs font-black text-[#FF8A00]">{u.rating || u.rawCombinedRating || 0}</span>
+                            <span className="text-[9px] text-gray-500 uppercase tracking-widest">Score</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 gap-3">
+                    <Trophy size={28} className="text-white/10" />
+                    <p className="text-xs text-gray-600 text-center">Leaderboard is empty right now.</p>
+                  </div>
+                )}
+                
+                <Link href="/leaderboard" className="mt-1 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold transition-all text-center">View Full Leaderboard</Link>
               </div>
             </div>
 
           </div>
         </div>
       </main>
+
+      {/* CUSTOM MODAL FOR COMING SOON */}
+      {showMockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#111216] border border-white/10 rounded-2xl p-6 shadow-2xl max-w-sm w-full text-center relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-cyan-400">
+              <Bot size={32} />
+            </div>
+            <h3 className="text-xl font-extrabold text-white mb-2">AI Mock Interview</h3>
+            <p className="text-sm text-gray-400 mb-6 flex flex-col items-center gap-2">
+              This feature is currently under development and will be available very soon. Stay tuned! 
+              <Rocket size={16} className="text-cyan-400" />
+            </p>
+            <button 
+              onClick={() => setShowMockModal(false)}
+              className="bg-white/10 hover:bg-white/15 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all w-full"
+            >
+              Got it
+            </button>
+          </motion.div>
+        </div>
+      )}
+      {/* CUSTOM MODAL FOR EXTENSION INSTALLATION */}
+      {showExtensionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#111216] border border-white/10 rounded-2xl p-6 shadow-2xl max-w-md w-full text-left relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF8A00]/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#FF8A00]/20 border border-[#FF8A00]/30 rounded-xl flex items-center justify-center text-[#FF8A00]">
+                  <MonitorSmartphone size={20} />
+                </div>
+                <h3 className="text-lg font-extrabold text-white">Install Codeyx Sync</h3>
+              </div>
+            </div>
+            
+            <p className="text-xs text-gray-400 mb-4">The Codeyx extension is generated locally. Follow these steps to install it in Chrome:</p>
+            
+            <ol className="text-xs text-gray-300 space-y-3 pl-4 list-decimal marker:text-[#FF8A00] font-medium mb-6">
+              <li>Open a new tab and go to <code className="bg-white/10 px-1.5 py-0.5 rounded text-white font-mono">chrome://extensions</code></li>
+              <li>Toggle <strong className="text-white">Developer mode</strong> ON in the top right corner.</li>
+              <li>Click <strong className="text-white">Load unpacked</strong> at the top left.</li>
+              <li>Select the <code className="bg-white/10 px-1.5 py-0.5 rounded text-white font-mono">f:\Codeyx\extension</code> folder.</li>
+              <li>Pin the extension, open it, and save your Codeyx User ID.</li>
+            </ol>
+
+            <button 
+              onClick={() => setShowExtensionModal(false)}
+              className="bg-[#FF8A00] hover:bg-orange-500 text-[#101014] font-bold py-2.5 px-6 rounded-xl text-sm transition-all w-full shadow-[0_4px_15px_rgba(255,138,0,0.3)]"
+            >
+              Done
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

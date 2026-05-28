@@ -3,6 +3,8 @@ import { fetchAndStoreContests } from './services/contest.service';
 import { redis } from './utils/redis';
 import { Reminder } from './models/Reminder';
 import { emitToUser } from './socket';
+import { PlatformStats } from './models/platformStats.model';
+import { FallbackManager } from './services/fallbackManager';
 
 export const startCronJobs = () => {
     const runRefresh = async () => {
@@ -16,8 +18,51 @@ export const startCronJobs = () => {
         }
     };
 
-    // Run every 2 hours
+    const runPlatformSync = async () => {
+        console.log('[Cron] Initiating platform auto-sync for all connected developer profiles...');
+        try {
+            const stats = await PlatformStats.find({});
+            const manager = FallbackManager.getInstance();
+            
+            for (const doc of stats) {
+                if (doc.platform && doc.username) {
+                    console.log(`[Platform Cron] Syncing ${doc.platform} for user @${doc.username}...`);
+                    try {
+                        const profile = await manager.resolveProfile(doc.platform, doc.username, true);
+                        
+                        const fetchedStats = {
+                            username: profile.username,
+                            totalSolved: profile.solved,
+                            rating: profile.rating,
+                            stars: profile.stars,
+                            globalRank: profile.rank,
+                            contests: profile.contests,
+                            followers: profile.followers,
+                            ...profile.metadata
+                        };
+
+                        doc.totalSolved = fetchedStats.totalSolved || 0;
+                        doc.rating = fetchedStats.rating || 0;
+                        doc.stats = fetchedStats;
+                        doc.lastSyncedAt = new Date();
+                        
+                        await doc.save();
+                        console.log(`[Platform Cron] Successfully auto-synced & updated database for ${doc.platform}:${doc.username}`);
+                    } catch (err: any) {
+                        console.error(`[Platform Cron Fail] Skipped ${doc.platform}:${doc.username} due to:`, err.message);
+                    }
+                }
+            }
+        } catch (err: any) {
+            console.error('[Platform Cron Error] Execution failed:', err.message);
+        }
+    };
+
+    // Run contest refresh every 2 hours
     cron.schedule('0 */2 * * *', runRefresh);
+
+    // Run platform stats auto-sync every 6 hours
+    cron.schedule('0 */6 * * *', runPlatformSync);
 
     // Trigger immediate background sync on startup to populate CodeChef & AtCoder
     runRefresh().catch(err => console.error('[Cron] Initial startup fetch failed:', err.message));

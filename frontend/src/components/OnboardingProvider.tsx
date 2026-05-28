@@ -2,6 +2,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
+import { useUser } from '@clerk/nextjs';
+import { profileService } from '@/services/profile.service';
+
 export interface PlatformHandles {
   leetcode: string;
   codeforces: string;
@@ -22,6 +25,7 @@ export interface UserProfile {
   gradYear: string;
   country: string;
   jobRole: string;
+  skills: string[];
   isOnboarded: boolean;
   step1Complete: boolean;
   platformHandles: PlatformHandles;
@@ -55,6 +59,7 @@ const defaultProfile: UserProfile = {
   gradYear: '',
   country: '',
   jobRole: '',
+  skills: [],
   isOnboarded: false,
   step1Complete: false,
   platformHandles: { ...defaultPlatformHandles },
@@ -65,8 +70,10 @@ const OnboardingContext = createContext<OnboardingContextProps | undefined>(unde
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isDbVerified, setIsDbVerified] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { user, isLoaded: isClerkLoaded } = useUser();
 
   // Load from localStorage on mount — merge with defaults for new fields
   useEffect(() => {
@@ -74,7 +81,6 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       const saved = localStorage.getItem('coderyx_profile');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Merge platformHandles with defaults so new fields get default values
         setProfile({
           ...defaultProfile,
           ...parsed,
@@ -89,6 +95,65 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
     setIsInitialized(true);
   }, []);
+
+  // Fetch and verify database profile to bypass onboarding for existing users
+  useEffect(() => {
+    if (isClerkLoaded && !user?.id) {
+      setIsDbVerified(true);
+      return;
+    }
+    if (!user?.id) return;
+    
+    const checkDatabaseProfile = async () => {
+      try {
+        const response: any = await profileService.getProfile(user.id);
+        const dbProfile = response.data?.data || response.data || response;
+        
+        // If the database has a profile and the user has filled details, verify them
+        if (dbProfile && Object.keys(dbProfile).length > 0) {
+          const isComplete = !!(dbProfile.college || dbProfile.degree || dbProfile.skills?.length > 0);
+          
+          if (isComplete) {
+            // Existing user detected! Instate their profile and bypass onboarding.
+            updateProfile({
+              ...dbProfile,
+              username: dbProfile.username || profile.username,
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
+              isOnboarded: true,
+              step1Complete: true
+            });
+          } else {
+            // Brand-new user with incomplete details: force onboarding
+            updateProfile({
+              ...dbProfile,
+              username: dbProfile.username || profile.username,
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
+              isOnboarded: false,
+              step1Complete: false
+            });
+          }
+        } else {
+          // No profile in database yet: force onboarding
+          updateProfile({
+            ...defaultProfile,
+            username: profile.username,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            isOnboarded: false,
+            step1Complete: false
+          });
+        }
+      } catch (err) {
+        console.error('Failed checking database profile for onboarding bypass:', err);
+      } finally {
+        setIsDbVerified(true);
+      }
+    };
+
+    checkDatabaseProfile();
+  }, [user?.id, isClerkLoaded]);
 
   // Sync to localStorage
   const updateProfile = (data: Partial<UserProfile>) => {
@@ -134,13 +199,19 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   // Redirect logic to enforce onboarding
   useEffect(() => {
     if (!isInitialized) return;
+    if (user?.id && !isDbVerified) return; // Wait for DB sync to finish to prevent layout flash/shifts
 
-    if (!profile.isOnboarded && (pathname === '/dashboard' || pathname === '/dashboard/home')) {
-      router.push('/dashboard/onboarding');
-    } else if (profile.isOnboarded && pathname === '/dashboard/onboarding') {
-      router.push('/dashboard');
+    const isOnboardingRoute = pathname === '/dashboard/onboarding';
+
+    // Only enforce redirect if the user is actually logged in
+    if (user?.id) {
+      if (!profile.isOnboarded && !isOnboardingRoute) {
+        router.push('/dashboard/onboarding');
+      } else if (profile.isOnboarded && isOnboardingRoute) {
+        router.push('/dashboard');
+      }
     }
-  }, [profile, isInitialized, pathname, router]);
+  }, [profile, isInitialized, isDbVerified, pathname, router, user?.id]);
 
   return (
     <OnboardingContext.Provider value={{ profile, updateProfile, completeUsernameSetup, completeFullProfile, resetOnboarding }}>

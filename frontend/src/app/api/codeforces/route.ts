@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const username = searchParams.get('username') || 'tourist';
+  const username = searchParams.get('username');
+  if (!username) {
+    return NextResponse.json({ error: 'Username parameter is required' }, { status: 400 });
+  }
 
   try {
     // Codeforces official API — free, no auth needed

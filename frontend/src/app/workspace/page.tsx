@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { progressService } from '../../services/progress.service';
 
 export default function WorkspacePage() {
   const [activeSheets, setActiveSheets] = useState<any[]>([]);
@@ -27,12 +28,18 @@ export default function WorkspacePage() {
     }
   }, []);
 
-  const handleRemove = (e: React.MouseEvent, id: string) => {
+  const handleRemove = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     const newSheets = activeSheets.filter(s => s.id !== id);
     setActiveSheets(newSheets);
     localStorage.setItem('activeSheets', JSON.stringify(newSheets));
     window.dispatchEvent(new CustomEvent('workspaceUpdated', { detail: newSheets }));
+    
+    try {
+      await progressService.deleteSheetProgress(id);
+    } catch (err) {
+      console.error('Failed to remove sheet progress from database:', err);
+    }
   };
 
   const getSheetIcon = (id: string) => {

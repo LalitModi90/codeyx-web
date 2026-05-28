@@ -2,9 +2,20 @@ import { Webhook } from 'svix';
 import { Request, Response } from 'express';
 import { User } from '../models/user.model';
 import { Profile } from '../models/profile.model';
+import { Project } from '../models/project.model';
+import { PlatformStats } from '../models/platformStats.model';
+import { UserActivity } from '../models/UserActivity';
+import { UserFavorite } from '../models/UserFavorite';
+import { UserProgress } from '../models/UserProgress';
+import { Reminder } from '../models/Reminder';
+import { CustomSheet } from '../models/CustomSheet';
+import { CustomSheetProblem } from '../models/CustomSheetProblem';
+import { Follower } from '../models/follower.model';
+import { Notification } from '../models/notification.model';
 import { addCleanupJob } from '../queues/cleanup.queue';
 import { emitToUser } from '../socket';
 import { redisClient } from '../config/redis.config';
+import { executeCascadeCleanup } from '../services/cleanup.service';
 
 export const clerkWebhookHandler = async (req: Request, res: Response) => {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -81,9 +92,72 @@ export const clerkWebhookHandler = async (req: Request, res: Response) => {
     }
 
     if (eventType === 'user.deleted') {
-      // Massive Cascade Delete Required
-      // We push this to BullMQ so we don't block the webhook response
-      await addCleanupJob(id);
+      console.log(`[Webhook] Commencing immediate soft delete / profile deactivation for Clerk ID ${id}...`);
+
+      // 1. Fetch follower/following connections to invalidate related user caches immediately
+      let followers: string[] = [];
+      let followings: string[] = [];
+      try {
+        const followerDocs = await Follower.find({ followingId: id }).lean();
+        const followingDocs = await Follower.find({ followerId: id }).lean();
+        followers = followerDocs.map(f => f.followerId);
+        followings = followingDocs.map(f => f.followingId);
+      } catch (err) {
+        console.error('[Webhook] Error fetching follower lists:', err);
+      }
+
+      // 2. Hide profile instantly by deleting key identity tables (User, Profile, PlatformStats)
+      await Promise.all([
+        User.deleteOne({ clerkUserId: id }),
+        Profile.deleteMany({ userId: id }),
+        PlatformStats.deleteMany({ userId: id }),
+      ]);
+
+      // 3. Clear direct and associated Redis caches immediately
+      try {
+        const keysToDel = [
+          `projects:${id}`,
+          `profile:${id}`,
+          `user:${id}`,
+          `followers:${id}`,
+          `following:${id}`,
+          `leaderboard:${id}`,
+          `portfolio:${id}`,
+          `analytics:${id}`
+        ];
+
+        followers.forEach(fid => keysToDel.push(`following:${fid}`));
+        followings.forEach(fid => keysToDel.push(`followers:${fid}`));
+
+        if (redisClient && typeof redisClient.del === 'function') {
+          await Promise.all(keysToDel.map(key => redisClient.del(key).catch(() => {})));
+        }
+      } catch (cacheErr) {
+        console.error('[Webhook] Error clearing caches:', cacheErr);
+      }
+
+      console.log(`[Webhook] Account hidden. Portfolios/Leaderboard disabled. Queueing full background cleanup for Clerk ID ${id}...`);
+
+      // 4. Try queueing background cleanup job (BullMQ Redis)
+      let queued = false;
+      try {
+        await addCleanupJob(id);
+        queued = true;
+      } catch (err) {
+        console.log('[Webhook] Cleanup queue skip (local dev Redis might be offline):', err);
+      }
+
+      // 5. If BullMQ queueing failed or bypassed (offline Redis), execute in-process non-blocking fallback cleanup
+      if (!queued) {
+        console.log('[Webhook] Executing fallback in-process background cleanup...');
+        Promise.resolve().then(async () => {
+          try {
+            await executeCascadeCleanup(id);
+          } catch (fallbackErr) {
+            console.error('[Webhook Fallback Background Cleanup Error]', fallbackErr);
+          }
+        });
+      }
       
       // Tell frontend to disconnect/clean UI
       emitToUser(id, 'USER_DELETED', { clerkUserId: id });

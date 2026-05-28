@@ -5,6 +5,9 @@ import { useOnboarding } from '../../../components/OnboardingProvider';
 import { useUser } from '@clerk/nextjs';
 import { profileService } from '@/services/profile.service';
 import UsernameSetupModal from '../../../components/UsernameSetupModal';
+import AddUniversityModal from '../../../components/AddUniversityModal';
+import SmartInput from '../../../components/SmartInput';
+import { DEGREE_OPTIONS, BRANCH_OPTIONS, JOB_ROLE_OPTIONS, COUNTRY_OPTIONS, getGradYearOptions } from '@/lib/onboardingData';
 import { 
   Sparkles, 
   ChevronRight, 
@@ -23,29 +26,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-// Popular Indian Universities/Institutes
-const popularColleges = [
-  "Indian Institute of Technology (IIT) Delhi",
-  "Indian Institute of Technology (IIT) Bombay",
-  "Indian Institute of Technology (IIT) Madras",
-  "Indian Institute of Technology (IIT) Kharagpur",
-  "Indian Institute of Technology (IIT) Roorkee",
-  "Indian Institute of Technology (IIT) Kanpur",
-  "Indian Institute of Technology (IIT) Guwahati",
-  "Delhi Technological University (DTU)",
-  "Netaji Subhas University of Technology (NSUT)",
-  "Birla Institute of Technology and Science (BITS) Pilani",
-  "Vellore Institute of Technology (VIT)",
-  "National Institute of Technology (NIT) Trichy",
-  "National Institute of Technology (NIT) Surathkal",
-  "National Institute of Technology (NIT) Warangal",
-  "Indian Institute of Information Technology (IIIT) Allahabad",
-  "Indian Institute of Information Technology (IIIT) Hyderabad",
-  "Amity University",
-  "SRM Institute of Science and Technology",
-  "Manipal Institute of Technology"
-];
-
+// Dynamic Colleges are fetched from API
 // Major Countries
 const popularCountries = [
   "India",
@@ -76,11 +57,67 @@ export default function OnboardingPage() {
   const [portfolio, setPortfolio] = useState('');
   const [linkedin, setLinkedin] = useState('');
   const [github, setGithub] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(profile.skills || []);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  const handleAddCustomSuggestion = async (category: string, value: string) => {
+    try {
+      // Optimitically select it
+      if (category === 'degree') setDegree(value);
+      if (category === 'branch') setBranch(value);
+      if (category === 'country') setCountryInput(value);
+      if (category === 'job_role') setJobRole(value);
+      
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ category, name: value, userId: user?.id })
+      });
+    } catch (err) {
+      console.error('Error saving custom suggestion:', err);
+    }
+  };
+
+  const availableSkills = ["C++", "Java", "Python", "JavaScript", "TypeScript", "React", "Node.js", "Express", "Next.js", "Go", "Rust", "SQL", "MongoDB", "Docker"];
+
   const [showCollegeDropdown, setShowCollegeDropdown] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  
+  const [colleges, setColleges] = useState<any[]>([]);
+  const [loadingColleges, setLoadingColleges] = useState(false);
+  const [showAddUniModal, setShowAddUniModal] = useState(false);
+
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      setLoadingColleges(true);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/universities?query=${encodeURIComponent(collegeInput)}`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        if (data.success) {
+          setColleges(data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching universities', err);
+      } finally {
+        setLoadingColleges(false);
+      }
+    };
+    
+    if (collegeInput.trim() === '') {
+      setColleges([]);
+      return;
+    }
+    
+    const timeoutId = setTimeout(() => {
+      fetchUniversities();
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [collegeInput]);
 
   // Step 2: Journey Selection
   const [journey, setJourney] = useState('competitive'); // 'competitive' | 'interviews' | 'academics'
@@ -95,9 +132,7 @@ export default function OnboardingPage() {
   // Step 5: Timeline
   const [timeline, setTimeline] = useState('3months'); // '1month' | '3months' | '6months' | 'self'
 
-  const filteredColleges = collegeInput
-    ? popularColleges.filter(c => c.toLowerCase().includes(collegeInput.toLowerCase()))
-    : popularColleges;
+  // Filtered countries (static)
 
   const filteredCountries = countryInput
     ? popularCountries.filter(c => c.toLowerCase().includes(countryInput.toLowerCase()))
@@ -115,11 +150,14 @@ export default function OnboardingPage() {
           await profileService.updateProfile({
             userId: user.id,
             college: collegeInput,
+            degree,
             branch,
             year: `${parseInt(gradYear) - 4} - ${gradYear}`,
+            jobRole,
             bio,
             portfolio,
             location: countryInput,
+            skills: selectedSkills,
             socialLinks: {
               github,
               linkedin,
@@ -139,6 +177,7 @@ export default function OnboardingPage() {
           gradYear,
           country: countryInput,
           jobRole,
+          skills: selectedSkills,
         });
       }
     }
@@ -160,6 +199,15 @@ export default function OnboardingPage() {
       
       {/* STEP 1: Username Setup Modal (triggers automatically if not complete) */}
       <UsernameSetupModal />
+      <AddUniversityModal 
+        isOpen={showAddUniModal} 
+        onClose={() => setShowAddUniModal(false)}
+        initialName={collegeInput}
+        onSuccess={(name) => {
+          setCollegeInput(name);
+          setShowAddUniModal(false);
+        }}
+      />
 
       {/* Decorative premium radial meshes */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] pointer-events-none"></div>
@@ -228,108 +276,106 @@ export default function OnboardingPage() {
                         className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all placeholder-zinc-700"
                       />
                     </div>
-                    {showCollegeDropdown && filteredColleges.length > 0 && (
-                      <div className="absolute z-50 w-full mt-1 bg-[#101014] border border-white/5 rounded-xl shadow-2xl max-h-40 overflow-y-auto scrollbar-thin">
-                        {filteredColleges.map((college) => (
-                          <button
-                            key={college}
-                            type="button"
-                            onMouseDown={() => setCollegeInput(college)}
-                            className="w-full text-left px-4 py-2.5 text-xs text-[#FAFAFA] hover:bg-white/5 transition-all truncate border-b border-white/5 last:border-0"
-                          >
-                            {college}
-                          </button>
-                        ))}
+                    {showCollegeDropdown && collegeInput.trim() !== '' && (
+                      <div className="absolute z-50 w-full mt-1 bg-[#101014] border border-white/5 rounded-xl shadow-2xl max-h-60 overflow-y-auto scrollbar-thin">
+                        {loadingColleges ? (
+                          <div className="p-4 text-xs text-[#A1A1AA] text-center">Searching...</div>
+                        ) : colleges.length > 0 ? (
+                          colleges.map((college) => (
+                            <button
+                              key={college._id || college.id}
+                              type="button"
+                              onMouseDown={() => setCollegeInput(college.name)}
+                              className="w-full text-left px-4 py-2.5 text-xs text-[#FAFAFA] hover:bg-white/5 transition-all truncate border-b border-white/5 last:border-0 flex items-center justify-between"
+                            >
+                              <span>{college.name}</span>
+                              {college.verified && <Check size={12} className="text-blue-400" title="Verified" />}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center">
+                            <p className="text-xs text-[#A1A1AA] mb-2">No matching university found.</p>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setShowAddUniModal(true);
+                                setShowCollegeDropdown(false);
+                              }}
+                              className="text-xs font-bold text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-1 mx-auto"
+                            >
+                              + Add Institution
+                            </button>
+                          </div>
+                        )}
+                        {colleges.length > 0 && !loadingColleges && (
+                           <button
+                             type="button"
+                             onMouseDown={(e) => {
+                               e.preventDefault();
+                               setShowAddUniModal(true);
+                               setShowCollegeDropdown(false);
+                             }}
+                             className="w-full p-3 text-xs font-bold text-orange-400 hover:bg-white/5 border-t border-white/5 transition-colors flex justify-center items-center gap-1"
+                           >
+                             Can't find yours? Add it
+                           </button>
+                        )}
                       </div>
                     )}
                   </div>
 
                   {/* Degree Input */}
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Degree Program</label>
-                    <input 
-                      type="text"
-                      placeholder="e.g. B.Tech / B.E."
-                      value={degree}
-                      onChange={(e) => setDegree(e.target.value)}
-                      className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
-                    />
-                  </div>
+                  <SmartInput 
+                    label="Degree Program"
+                    placeholder="e.g. B.Tech / B.E."
+                    value={degree}
+                    onChange={setDegree}
+                    options={DEGREE_OPTIONS}
+                    onAddCustom={(val) => handleAddCustomSuggestion('degree', val)}
+                  />
 
                   {/* Branch Input */}
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Academic Branch</label>
-                    <input 
-                      type="text"
-                      placeholder="e.g. Computer Science"
-                      value={branch}
-                      onChange={(e) => setBranch(e.target.value)}
-                      className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
-                    />
-                  </div>
+                  <SmartInput 
+                    label="Academic Branch"
+                    placeholder="e.g. Computer Science"
+                    value={branch}
+                    onChange={setBranch}
+                    options={BRANCH_OPTIONS}
+                    onAddCustom={(val) => handleAddCustomSuggestion('branch', val)}
+                  />
 
                   {/* Graduation Year */}
-                  <div>
-                    <label htmlFor="grad-year" className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Graduation Year</label>
-                    <select
-                      id="grad-year"
-                      value={gradYear}
-                      onChange={(e) => setGradYear(e.target.value)}
-                      className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
-                    >
-                      {["2024", "2025", "2026", "2027", "2028", "2029"].map((year) => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <SmartInput 
+                    label="Graduation Year"
+                    placeholder="e.g. 2026"
+                    value={gradYear}
+                    onChange={setGradYear}
+                    options={getGradYearOptions()}
+                    allowCustom={false}
+                  />
 
                   {/* Country Autocomplete */}
-                  <div className="relative">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Country / Region</label>
-                    <input 
-                      type="text"
-                      placeholder="Type country..."
-                      value={countryInput}
-                      onChange={(e) => {
-                        setCountryInput(e.target.value);
-                        setShowCountryDropdown(true);
-                      }}
-                      onFocus={() => setShowCountryDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowCountryDropdown(false), 200)}
-                      className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
-                    />
-                    {showCountryDropdown && filteredCountries.length > 0 && (
-                      <div className="absolute z-50 w-full mt-1 bg-[#101014] border border-white/5 rounded-xl shadow-2xl max-h-40 overflow-y-auto scrollbar-thin">
-                        {filteredCountries.map((country) => (
-                          <button
-                            key={country}
-                            type="button"
-                            onMouseDown={() => setCountryInput(country)}
-                            className="w-full text-left px-4 py-2.5 text-xs text-[#FAFAFA] hover:bg-white/5 transition-all truncate border-b border-white/5 last:border-0"
-                          >
-                            {country}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <SmartInput 
+                    label="Country / Region"
+                    placeholder="Type country..."
+                    value={countryInput}
+                    onChange={setCountryInput}
+                    options={COUNTRY_OPTIONS}
+                    onAddCustom={(val) => handleAddCustomSuggestion('country', val)}
+                  />
 
                   {/* Target Job Role */}
-                  <div>
-                    <label htmlFor="job-role" className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Target Job Role</label>
-                    <select
-                      id="job-role"
-                      value={jobRole}
-                      onChange={(e) => setJobRole(e.target.value)}
-                      className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
-                    >
-                      <option value="SDE / Developer">SDE / Software Engineer</option>
-                      <option value="Frontend Engineer">Frontend Engineer</option>
-                      <option value="Backend Specialist">Backend Specialist</option>
-                      <option value="Fullstack Engineer">Fullstack Specialist</option>
-                      <option value="Data Structures Coach">CP Coach / Competitor</option>
-                    </select>
-                  </div>
+                  <SmartInput 
+                    label="Target Job Role"
+                    placeholder="e.g. SDE / Developer"
+                    value={jobRole}
+                    onChange={setJobRole}
+                    options={JOB_ROLE_OPTIONS}
+                    onAddCustom={(val) => handleAddCustomSuggestion('job_role', val)}
+                  />
+
+
 
                   {/* Bio */}
                   <div className="md:col-span-2">
@@ -370,13 +416,41 @@ export default function OnboardingPage() {
                   {/* GitHub */}
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">GitHub Username <span className="text-zinc-600 normal-case font-normal">(optional)</span></label>
-                    <input
+                    <input 
                       type="text"
                       placeholder="github.com/yourusername"
                       value={github}
                       onChange={(e) => setGithub(e.target.value)}
                       className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                     />
+                  </div>
+
+                  {/* Technical Skills Selection */}
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-2.5 ml-1">Technical Skills & Languages</label>
+                    <div className="flex flex-wrap gap-2 p-3 bg-[#09090B] border border-white/5 rounded-xl">
+                      {availableSkills.map(skill => {
+                        const isSelected = selectedSkills.includes(skill);
+                        return (
+                          <button
+                            key={skill}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSkills(prev => 
+                                prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+                              );
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                              isSelected 
+                                ? 'bg-[#FF8A00]/10 border-[#FF8A00] text-[#FF8A00]' 
+                                : 'bg-[#101014] border-white/5 text-gray-400 hover:border-white/10 hover:text-white'
+                            }`}
+                          >
+                            {skill}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </motion.div>

@@ -1,3 +1,5 @@
+import { graphqlRequest } from '../utils/httpClient';
+
 export const fetchLeetCodeStats = async (username: string) => {
   const query = `
     query getUserProfile($username: String!) {
@@ -24,35 +26,26 @@ export const fetchLeetCodeStats = async (username: string) => {
         topPercentage
       }
       userContestRankingHistory(username: $username) {
+        attended
         contest { title startTime }
         rating
         ranking
       }
-      recentAcSubmissionList(username: $username, limit: 15) {
-        id
+      recentSubmissionList(username: $username, limit: 15) {
         title
-        titleSlug
         timestamp
+        statusDisplay
+        lang
       }
     }
   `;
 
   try {
-    const response = await fetch('https://leetcode.com/graphql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 Codeyx/1.0',
-      },
-      body: JSON.stringify({ query, variables: { username } }),
-    });
-
-    if (!response.ok) throw new Error(`LeetCode API returned ${response.status}`);
-    const result = await response.json();
-    if (result.errors) throw new Error(result.errors[0].message);
-    if (!result.data.matchedUser) throw new Error('User not found on LeetCode');
-
-    const d = result.data;
+    const d = await graphqlRequest(
+      'https://leetcode.com/graphql',
+      query,
+      { username }
+    );
     const acStats = d.matchedUser.submitStats.acSubmissionNum;
     const contest = d.userContestRanking;
     
@@ -66,24 +59,44 @@ export const fetchLeetCodeStats = async (username: string) => {
     }));
 
     // Process Topics
-    const tags = [
-      ...(d.matchedUser.tagProblemCounts.advanced || []),
-      ...(d.matchedUser.tagProblemCounts.intermediate || []),
-      ...(d.matchedUser.tagProblemCounts.fundamental || [])
-    ].sort((a: any, b: any) => b.problemsSolved - a.problemsSolved).slice(0, 6).map((t: any) => ({
+    const advanced = (d.matchedUser.tagProblemCounts?.advanced || []).map((t: any) => ({
        name: t.tagName,
        count: t.problemsSolved,
-       pct: 'N/A' // Calculated in frontend relative to max
+       problemsSolved: t.problemsSolved,
+       tagName: t.tagName,
+       category: 'Advanced'
     }));
 
-    // Process Submissions
-    const submissions = (d.recentAcSubmissionList || []).map((s: any) => ({
-       name: s.title,
-       date: new Date(s.timestamp * 1000).toLocaleString(),
-       diff: 'N/A', // Leetcode doesn't return diff here without another query
-       status: 'Accepted',
-       success: true
+    const intermediate = (d.matchedUser.tagProblemCounts?.intermediate || []).map((t: any) => ({
+       name: t.tagName,
+       count: t.problemsSolved,
+       problemsSolved: t.problemsSolved,
+       tagName: t.tagName,
+       category: 'Intermediate'
     }));
+
+    const fundamental = (d.matchedUser.tagProblemCounts?.fundamental || []).map((t: any) => ({
+       name: t.tagName,
+       count: t.problemsSolved,
+       problemsSolved: t.problemsSolved,
+       tagName: t.tagName,
+       category: 'Fundamental'
+    }));
+
+    const tags = [...advanced, ...intermediate, ...fundamental];
+
+    // Process Submissions
+    const submissions = (d.recentSubmissionList || []).map((s: any) => {
+       const displayLang = s.lang ? (s.lang.charAt(0).toUpperCase() + s.lang.slice(1)) : 'Java';
+       return {
+         name: s.title,
+         date: new Date(s.timestamp * 1000).toLocaleString(),
+         diff: 'N/A',
+         status: s.statusDisplay || 'Accepted',
+         language: displayLang,
+         success: s.statusDisplay === 'Accepted'
+       };
+    });
 
     // Process Calendar Heatmap
     let calendarObj = {};

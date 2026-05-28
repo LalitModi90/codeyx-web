@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPlatformStats extends Document {
   userId: string;
-  platform: 'leetcode' | 'codeforces' | 'github' | 'codechef';
+  platform: 'leetcode' | 'codeforces' | 'github' | 'codechef' | 'codeyx' | 'atcoder' | 'hackerrank';
   username: string;
   stats: any; // Dynamic JSON to hold the raw data
   totalSolved: number;
@@ -15,7 +15,7 @@ const PlatformStatsSchema = new Schema<IPlatformStats>(
     userId: { type: String, required: true, index: true },
     platform: { 
       type: String, 
-      enum: ['leetcode', 'codeforces', 'github', 'codechef'], 
+      enum: ['leetcode', 'codeforces', 'github', 'codechef', 'codeyx', 'atcoder', 'hackerrank'], 
       required: true 
     },
     username: { type: String, required: true },

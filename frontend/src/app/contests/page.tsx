@@ -6,7 +6,7 @@ import {
   Trophy, Calendar, PlayCircle, History, User, Bookmark, 
   Search, ChevronDown, ChevronLeft, ChevronRight, CheckSquare, Settings, ArrowRight,
   MonitorPlay, Code2, Shield, CalendarDays, Users, LayoutList,
-  Filter, Star, TrendingUp, Clock, Plus, CalendarPlus, BellRing, Lock
+  Filter, Star, TrendingUp, Clock, Plus, CalendarPlus, BellRing, Lock, RefreshCw
 } from 'lucide-react';
 import TopNavbar from '@/components/shared/TopNavbar';
 import { SignedIn, SignedOut, useAuth } from '@clerk/nextjs';
@@ -130,7 +130,7 @@ export default function ContestsPage() {
     setIsReminderSubmitting(true);
     setReminderStatusMsg('');
     try {
-      const res = await fetch('http://localhost:5005/api/contests/reminders', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/contests/reminders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,12 +156,67 @@ export default function ContestsPage() {
   const [contestsList, setContestsList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugMsg, setDebugMsg] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncContests = async () => {
+    setIsSyncing(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/contests?refresh=true`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch from backend: ' + response.status);
+      }
+      const json = await response.json();
+      if (json.success && json.data) {
+        const mappedData = json.data.map((c: any) => {
+          const startDate = new Date(c.startTime);
+          let iconColor = 'text-gray-400';
+          let diffColor = 'text-[#FF8A00]';
+          let plat = c.site || 'Unknown';
+          
+          if (plat.toLowerCase().includes('leetcode')) { iconColor = 'text-yellow-500'; diffColor = 'text-emerald-400'; }
+          else if (plat.toLowerCase().includes('codechef')) { iconColor = 'text-[#FF8A00]'; diffColor = 'text-rose-500'; }
+          else if (plat.toLowerCase().includes('atcoder')) { iconColor = 'text-gray-300'; diffColor = 'text-[#FF8A00]'; }
+          else if (plat.toLowerCase().includes('codeforces')) { iconColor = 'text-blue-500'; diffColor = 'text-rose-500'; }
+          else if (plat.toLowerCase().includes('hacker')) { iconColor = 'text-emerald-500'; diffColor = 'text-emerald-400'; }
+
+          let status = 'Upcoming';
+          const endDate = new Date(c.endTime);
+          const currentDate = new Date();
+          
+          if (c.status === 'CODING' || (currentDate >= startDate && currentDate <= endDate)) {
+            status = 'Live';
+          }
+
+          return {
+            id: c._id,
+            name: c.name,
+            plat: plat,
+            date: startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            time: startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+            timestamp: startDate.getTime(),
+            startTime: c.startTime,
+            endTime: c.endTime,
+            url: c.url,
+            status: status,
+            iconColor,
+            diff: plat.toLowerCase().includes('leetcode') ? 'Easy' : 'Medium',
+            diffColor
+          };
+        });
+        setContestsList(mappedData);
+      }
+    } catch (error: any) {
+      console.error("Error refreshing contests:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   React.useEffect(() => {
     const fetchContests = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('http://localhost:5005/api/contests');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/contests`);
         if (!response.ok) {
           throw new Error('Failed to fetch from backend: ' + response.status);
         }
@@ -263,6 +318,15 @@ export default function ContestsPage() {
                 Compete, challenge and improve your problem solving skills.
               </p>
             </div>
+            
+            <button
+              onClick={handleSyncContests}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] hover:border-white/10 active:scale-95 transition-all text-xs font-black text-white shadow-lg disabled:opacity-50 relative z-10"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#FF8A00] ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Syncing...' : 'Sync Contests'}</span>
+            </button>
           </div>
 
 
@@ -396,12 +460,10 @@ export default function ContestsPage() {
                        
                        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1 pr-0.5 min-h-0">
                          {dayContests.map((c, idx) => (
-                           <button 
-                             key={idx} 
-                             onClick={() => { setSelectedContest(c); setReminderStatusMsg(''); }} 
-                             target="_blank" 
-                             rel="noopener noreferrer"
-                             className={`px-1.5 py-1 rounded text-[9px] font-bold truncate flex items-center gap-1 ${
+                            <button 
+                              key={idx} 
+                              onClick={() => { setSelectedContest(c); setReminderStatusMsg(''); }} 
+                              className={`px-1.5 py-1 rounded text-[9px] font-bold truncate flex items-center gap-1 ${
                                c.status === 'Live' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 
                                c.plat.toLowerCase().includes('codeforces') ? 'bg-blue-500/10 text-blue-400' :
                                c.plat.toLowerCase().includes('leetcode') ? 'bg-yellow-500/10 text-yellow-400' :
@@ -545,7 +607,7 @@ export default function ContestsPage() {
 
                     {/* Apple / Download ICS */}
                     <a 
-                      href={`http://localhost:5005/api/contests/export/ics/${selectedContest.id}`}
+                      href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/contests/export/ics/${selectedContest.id}`}
                       download
                       className="flex flex-col items-center gap-1 py-3 px-2 bg-[#FF8A00]/10 hover:bg-[#FF8A00]/15 border border-[#FF8A00]/20 hover:border-[#FF8A00]/30 text-xs font-black rounded-xl transition-all duration-300 hover:-translate-y-0.5"
                     >

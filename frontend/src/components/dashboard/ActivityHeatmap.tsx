@@ -12,8 +12,14 @@ export default function ActivityHeatmap({ submissionCalendar, theme }: Props) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Year switcher state
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [tooltip, setTooltip] = useState<{ x: number, y: number, date: string, count: number } | null>(null);
+
+  // Generate an array of years from current year down to (currentYear - 1)
+  const availableYears = useMemo(() => {
+    return [currentYear, currentYear - 1];
+  }, [currentYear]);
 
   // Dynamically generate exact Gregorian calendar data grouped by month
   const monthsData = useMemo(() => {
@@ -54,24 +60,7 @@ export default function ActivityHeatmap({ submissionCalendar, theme }: Props) {
           }
         }
 
-        // Mock green density levels matching mockup
-        if (count === 0) {
-          const seed = curr.getDate() * (m + 1);
-          if (selectedYear === 2024) {
-            if (seed % 3 === 0) count = 10;
-            else if (seed % 4 === 0) count = 7;
-            else if (seed % 5 === 0) count = 4;
-            else if (seed % 7 === 0) count = 2;
-            else if (seed % 11 === 0) count = 1;
-          } else if (selectedYear === 2023) {
-            if (seed % 5 === 0) count = 8;
-            else if (seed % 7 === 0) count = 4;
-            else if (seed % 9 === 0) count = 1;
-          } else {
-            if (seed % 8 === 0) count = 6;
-            else if (seed % 11 === 0) count = 2;
-          }
-        }
+
 
         // Place cell in its correct weekday index (0 = Sun, 6 = Sat)
         currentWeek[dayOfWeek] = { date: dateStr, count, dayOfWeek };
@@ -140,9 +129,9 @@ export default function ActivityHeatmap({ submissionCalendar, theme }: Props) {
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
             className="text-[10px] bg-purple-950/40 border border-purple-500/20 text-purple-400 font-bold focus:outline-none cursor-pointer rounded-lg px-2.5 py-1 hover:bg-purple-900/35 transition-all shadow-[0_0_8px_rgba(139,92,246,0.15)]"
           >
-            <option value={2024} className="bg-[#0f1419] text-white">2024</option>
-            <option value={2023} className="bg-[#0f1419] text-white">2023</option>
-            <option value={2022} className="bg-[#0f1419] text-white">2022</option>
+            {availableYears.map(y => (
+              <option key={y} value={y} className="bg-[#0f1419] text-white">{y}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -249,7 +238,7 @@ export default function ActivityHeatmap({ submissionCalendar, theme }: Props) {
             }}
           >
             <span className="font-extrabold text-white">
-              {tooltip.count === 0 ? 'No' : <span className="text-emerald-400">{tooltip.count}</span>} submissions
+              {tooltip.count === 0 ? 'No' : <span className="text-emerald-400">{tooltip.count}</span>} tasks completed
             </span>
             <span className="text-[8px] text-gray-500 font-mono mt-0.5">{new Date(tooltip.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
           </motion.div>

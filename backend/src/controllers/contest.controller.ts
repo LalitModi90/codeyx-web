@@ -143,28 +143,43 @@ import { fetchAndStoreContests } from '../services/contest.service';
 
 export const getUpcomingContests = async (req: Request, res: Response) => {
     try {
-        // 1. Try fetching from Redis Cache
-        const cachedData = await redis.get('contests_upcoming');
-        if (cachedData) {
-            const parsed = typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                console.log('Serving upcoming contests from Redis cache');
-                return res.json({ success: true, data: parsed });
+        const forceRefresh = req.query.refresh === 'true';
+
+        // 1. Try fetching from Redis Cache (unless force refresh is requested)
+        if (!forceRefresh) {
+            const cachedData = await redis.get('contests_upcoming');
+            if (cachedData) {
+                const parsed = typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    console.log('Serving upcoming contests from Redis cache');
+                    return res.json({ success: true, data: parsed });
+                }
             }
         }
 
-        console.log('Cache miss: Fetching from MongoDB...');
-        // 2. Try fetching from MongoDB
-        let contests = await Contest.find().sort({ startTime: 1 }).lean();
+        console.log(forceRefresh ? 'Force Refresh triggered: Fetching from APIs...' : 'Cache miss: Fetching from MongoDB...');
         
-        // 3. If MongoDB is empty (First run), trigger manual fetch
-        if (!contests || contests.length === 0) {
-            console.log('MongoDB empty: Triggering background fetch service...');
+        let contests = [];
+        if (forceRefresh) {
+            // Trigger fresh fetch
             const freshData = await fetchAndStoreContests();
             if (freshData && freshData.length > 0) {
                 contests = freshData as any;
             } else {
-                return res.status(503).json({ success: false, message: 'Service Unavailable. APIs failed.' });
+                // Fallback to database cache if all live contest APIs failed
+                contests = await Contest.find().sort({ startTime: 1 }).lean();
+            }
+        } else {
+            // Read from MongoDB
+            contests = await Contest.find().sort({ startTime: 1 }).lean();
+            if (!contests || contests.length === 0) {
+                console.log('MongoDB empty: Triggering background fetch service...');
+                const freshData = await fetchAndStoreContests();
+                if (freshData && freshData.length > 0) {
+                    contests = freshData as any;
+                } else {
+                    return res.status(503).json({ success: false, message: 'Service Unavailable. APIs failed.' });
+                }
             }
         }
 

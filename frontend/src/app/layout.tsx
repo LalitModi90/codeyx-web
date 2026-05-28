@@ -5,6 +5,7 @@ import { ThemeProvider } from "../components/ThemeProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { OnboardingProvider } from "../components/OnboardingProvider";
 import ReactQueryProvider from "../providers/ReactQueryProvider";
+import FeedbackButton from "../components/FeedbackButton";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -36,6 +37,7 @@ export default function RootLayout({
             <ReactQueryProvider>
               <OnboardingProvider>
                 {children}
+                <FeedbackButton />
               </OnboardingProvider>
             </ReactQueryProvider>
           </ThemeProvider>
