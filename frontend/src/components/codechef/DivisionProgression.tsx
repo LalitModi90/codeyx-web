@@ -26,7 +26,7 @@ export default function DivisionProgression({ rating = 1157 }: DivisionProgressi
   // Calculate current division and target
   const details = useMemo(() => {
     let currentDiv = divisions[0];
-    let nextDiv = divisions[1];
+    let nextDiv: { name: string; range: string; min: number; max: number; id: number; } | null = divisions[1];
 
     if (rating >= 2000) {
       currentDiv = divisions[3];
