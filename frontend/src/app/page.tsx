@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import Link from 'next/link';
 import { Bot, Sparkles } from 'lucide-react';
 
+// Trigger deployment build
 export default function Home() {
   return (
     <main className="min-h-screen relative">
