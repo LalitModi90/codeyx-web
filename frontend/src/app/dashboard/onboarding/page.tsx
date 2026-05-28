@@ -289,7 +289,11 @@ export default function OnboardingPage() {
                               className="w-full text-left px-4 py-2.5 text-xs text-[#FAFAFA] hover:bg-white/5 transition-all truncate border-b border-white/5 last:border-0 flex items-center justify-between"
                             >
                               <span>{college.name}</span>
-                              {college.verified && <Check size={12} className="text-blue-400" title="Verified" />}
+                              {college.verified && (
+                                <span title="Verified">
+                                  <Check size={12} className="text-blue-400" />
+                                </span>
+                              )}
                             </button>
                           ))
                         ) : (
