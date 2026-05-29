@@ -84,12 +84,16 @@ function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
     const hasConnected = Object.keys(platformBreakdown).length > 0;
     const hasData      = hasConnected && (totalSolved > 0 || combinedRating > 0);
 
-    // Friendly display name from Clerk user object
+    // Friendly display name: prioritize Mongoose profile name, fallback to Clerk
     const firstName = clerkUser.firstName || '';
     const lastName  = clerkUser.lastName  || '';
-    const fullName  = `${firstName} ${lastName}`.trim();
+    const clerkFullName = `${firstName} ${lastName}`.trim();
+    const fullName  = userProfile?.name || clerkFullName || 'Anonymous Developer';
+    
     const email     = (clerkUser.emailAddresses?.[0]?.emailAddress) || '';
-    const username  = clerkUser.username || email.split('@')[0] || clerkUser.id;
+    
+    // Strict DB username check
+    const username = userProfile?.username || clerkUser.username || null;
     const avatarUrl = clerkUser.imageUrl || clerkUser.profileImageUrl || '';
 
     const isPublic = userProfile?.publicSettings?.isPublic !== false;
@@ -141,11 +145,22 @@ export const getLeaderboard = async (req: Request, res: Response) => {
         });
 
         // 3. Build leaderboard entries for every Clerk user
-        const leaderboardData = clerkUsers.map((cu: any) =>
+        const rawLeaderboardData = clerkUsers.map((cu: any) =>
             buildUserEntry(cu, statsByUser[cu.id] || [], profilesByUser[cu.id])
         );
 
-        // 4. Only keep users who have at least one connected platform
+        // Pass 2: Finalize usernames without any automatic changing/shifting
+        const leaderboardData = rawLeaderboardData.map((u: any) => {
+            const profile = profilesByUser[u.userId];
+            if (profile?.username) {
+                u.username = profile.username;
+            }
+            // If profile.username doesn't exist, it already has the default emailPrefix from buildUserEntry
+            // We intentionally do NOT run any deduplication or shifting logic here as per user request.
+            return u;
+        });
+
+        // 4. Only keep users who have at least one connected platform (Stats are required)
         const activeUsers = leaderboardData.filter((u: any) => u.hasConnected);
 
         // 5. Sort: highest codeyxScore first; ties broken by problems solved

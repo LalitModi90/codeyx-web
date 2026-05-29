@@ -2,6 +2,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IProfile extends Document {
   userId: string;
+  username?: string;
+  name?: string;
   bio: string;
   about: string;
   location: string;
@@ -31,6 +33,8 @@ export interface IProfile extends Document {
 const profileSchema = new Schema<IProfile>(
   {
     userId: { type: String, required: true, unique: true },
+    username: { type: String, unique: true, sparse: true },
+    name: { type: String, default: '' },
     bio: { type: String, default: '' },
     about: { type: String, default: '' },
     location: { type: String, default: '' },

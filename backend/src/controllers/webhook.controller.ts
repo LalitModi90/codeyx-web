@@ -70,9 +70,33 @@ export const clerkWebhookHandler = async (req: Request, res: Response) => {
         avatarUrl: evt.data.image_url || '',
       });
 
-      // Auto Create Profile
+      const firstName = evt.data.first_name || '';
+      const lastName = evt.data.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      // Generate base name for username
+      let baseName = firstName ? firstName.toLowerCase().replace(/[^a-z0-9_]/g, '') : 'user';
+      if (!baseName && email) {
+        baseName = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+      }
+
+      // Ensure uniqueness
+      let isUnique = false;
+      let newUsername = '';
+      let attempts = 0;
+      while (!isUnique && attempts < 10) {
+        const randomDigits = Math.floor(Math.random() * 900000) + 100000;
+        newUsername = `${baseName}_${randomDigits}`;
+        const existing = await Profile.findOne({ username: { $regex: new RegExp(`^${newUsername}$`, 'i') } });
+        if (!existing) isUnique = true;
+        attempts++;
+      }
+
+      // Auto Create Profile with initial name and username
       await Profile.create({
         userId: id,
+        name: fullName,
+        username: newUsername,
       });
 
       console.log(`[Webhook] System setup complete for new user: ${id}`);

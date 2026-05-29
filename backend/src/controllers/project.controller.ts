@@ -275,43 +275,50 @@ export const getPublicPortfolio = async (req: Request, res: Response) => {
   try {
     const { username } = req.params;
 
-    // Find GitHub platform stats where username matches
-    const githubStatsDoc = await PlatformStats.findOne({
-      platform: 'github',
-      username: { $regex: new RegExp(`^${username}$`, 'i') }
-    });
+    // First try to find by Codeyx Profile username
+    let profile = await Profile.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+    let userId = profile?.userId;
+    let githubStatsDoc = null;
 
-    if (!githubStatsDoc) {
-      return res.status(404).json({ success: false, message: 'Developer portfolio not found.' });
+    if (userId) {
+      githubStatsDoc = await PlatformStats.findOne({ userId, platform: 'github' });
+    } else {
+      // Fallback: search by GitHub username (legacy routing)
+      githubStatsDoc = await PlatformStats.findOne({
+        platform: 'github',
+        username: { $regex: new RegExp(`^${username}$`, 'i') }
+      });
+      if (!githubStatsDoc) {
+        return res.status(404).json({ success: false, message: 'Developer portfolio not found.' });
+      }
+      userId = githubStatsDoc.userId;
+      profile = await Profile.findOne({ userId });
     }
 
-    const { userId } = githubStatsDoc;
-
-    // Fetch related profiles
-    const [profile, user, projects] = await Promise.all([
-      Profile.findOne({ userId }),
+    // Fetch related user and projects
+    const [user, projects] = await Promise.all([
       User.findOne({ clerkUserId: userId }),
       Project.find({ userId, visibility: 'public' }).sort({ featured: -1, createdAt: -1 })
     ]);
 
     const portfolioData = {
-      username: githubStatsDoc.username,
+      username: profile?.username || githubStatsDoc?.username || username,
       user: user ? {
         firstName: user.firstName,
         lastName: user.lastName,
-        avatarUrl: user.avatarUrl || githubStatsDoc.stats?.avatar || '',
+        avatarUrl: user.avatarUrl || githubStatsDoc?.stats?.avatar || '',
       } : {
-        firstName: githubStatsDoc.stats?.name || githubStatsDoc.username,
+        firstName: githubStatsDoc?.stats?.name || githubStatsDoc?.username || username,
         lastName: '',
-        avatarUrl: githubStatsDoc.stats?.avatar || '',
+        avatarUrl: githubStatsDoc?.stats?.avatar || '',
       },
       profile: profile || {
-        bio: githubStatsDoc.stats?.metadata?.extra?.bio || 'Open Source Contributor',
-        location: githubStatsDoc.stats?.metadata?.extra?.location || '',
-        socialLinks: { github: `https://github.com/${githubStatsDoc.username}` },
+        bio: githubStatsDoc?.stats?.metadata?.extra?.bio || 'Open Source Contributor',
+        location: githubStatsDoc?.stats?.metadata?.extra?.location || '',
+        socialLinks: { github: githubStatsDoc?.username ? `https://github.com/${githubStatsDoc.username}` : '' },
         publicSettings: { isPublic: true, showProjects: true, showSkills: true }
       },
-      githubStats: githubStatsDoc.stats,
+      githubStats: githubStatsDoc?.stats,
       projects
     };
 
