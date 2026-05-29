@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { Contest } from '../models/contest.model';
+import { Contest } from '../models/Contest';
 import { clerkClient } from '@clerk/clerk-sdk-node';
 import { sendContestNotificationEmail } from '../services/mail.service';
 
