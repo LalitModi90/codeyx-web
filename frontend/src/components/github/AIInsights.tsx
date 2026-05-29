@@ -10,12 +10,12 @@ export default function AIInsights({ profile, languages, repositories }: Props) 
     const top = [...languages].sort((a, b) => b.percentage - a.percentage);
     const strongestLang = top[0]?.language || 'Unknown';
 
-    const mostActive = [...repositories]
-      .sort((a, b) => b.stars - a.stars)[0]?.name || 'N/A';
+    const bestRepo = [...repositories].sort((a, b) => b.stars - a.stars)[0];
+    const mostActive = bestRepo?.name || 'N/A';
+    const hasStars = bestRepo?.stars > 0;
 
     const totalRepos   = repositories.length;
     const deployedCount= repositories.filter(r => r.hasDeployment).length;
-    const ossCount     = repositories.filter(r => r.visibility === 'Public').length;
 
     const collaborationScore = Math.min(100, Math.round(
       ((profile.followers / 10) + (profile.totalForks * 2) + (profile.prsCount * 3)) / 3
@@ -27,14 +27,16 @@ export default function AIInsights({ profile, languages, repositories }: Props) 
     const insights = [
       {
         title: 'Strongest Technology',
-        desc: `Dominant expertise in ${strongestLang} (${top[0]?.percentage || 0}% of repos). Your code base reflects high proficiency and consistent tooling choices.`,
+        desc: `Dominant expertise in ${strongestLang} (${top[0]?.percentage || 0}% of codebase). Your repository analytics show high proficiency in this stack.`,
         type: 'strength',
         color: 'text-emerald-400',
         bg: 'bg-emerald-500/5 border-emerald-500/10',
       },
       {
-        title: 'Most Active Repository',
-        desc: `"${mostActive}" is your top repository by community engagement. High star-to-fork ratio indicates strong project quality.`,
+        title: hasStars ? 'Top Repository' : 'Recent Activity',
+        desc: hasStars 
+          ? `"${mostActive}" is your most popular repository with ${bestRepo.stars} stars and ${bestRepo.forks} forks.`
+          : `"${mostActive}" is your latest active repository. Try sharing your projects to gain community stars and feedback.`,
         type: 'active',
         color: 'text-[#58A6FF]',
         bg: 'bg-blue-500/5 border-blue-500/10',
@@ -50,14 +52,14 @@ export default function AIInsights({ profile, languages, repositories }: Props) 
 
     const recommendations = [
       deployedCount < totalRepos / 2
-        ? `Deploy more projects — only ${deployedCount}/${totalRepos} repos have live deployments. Consider adding Vercel/Netlify.`
+        ? `Deploy more projects — only ${deployedCount}/${totalRepos} repos have live deployments. Consider adding Vercel or GitHub Pages.`
         : `Excellent deployment culture! ${deployedCount} live projects demonstrate production-ready engineering skills.`,
       profile.prsCount < 5
-        ? `Increase open-source contributions via pull requests to repositories beyond your own.`
-        : `Strong PR activity (${profile.prsCount} PRs). Keep collaborating to strengthen your OSS identity.`,
+        ? `Increase open-source contributions. You have ${profile.prsCount} PRs; try contributing to other repositories.`
+        : `Strong PR activity (${profile.prsCount} PRs). Keep collaborating to strengthen your open-source identity.`,
       top.length < 3
-        ? `Diversify your tech stack — adding ${top.length === 1 ? 'a second' : 'another'} language boosts portfolio appeal.`
-        : `Strong multi-language portfolio (${top.length} languages). ${strongestLang} expertise is your defining strength.`,
+        ? `Diversify your tech stack — adding a new language or framework boosts your portfolio appeal.`
+        : `Strong multi-tech portfolio (${top.length} technologies). ${strongestLang} is your defining strength.`,
     ];
 
     return { strongestLang, mostActive, collaborationScore, consistencyLevel, insights, recommendations };

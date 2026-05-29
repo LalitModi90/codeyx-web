@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Profile } from '../models/profile.model';
+import { User } from '../models/user.model';
 import { ApiResponse } from '../utils/ApiResponse';
 import { getSocketIo } from '../socket';
 import { redisClient } from '../config/redis.config';
@@ -20,6 +21,9 @@ export const updateProfile = async (req: Request, res: Response) => {
       if (existing) {
         return res.status(400).json({ success: false, message: 'Username is already taken' });
       }
+
+      // Sync the username to the User collection as well
+      await User.findOneAndUpdate({ clerkUserId: userId }, { username: updatedData.username });
     }
 
     const profile = await Profile.findOneAndUpdate(

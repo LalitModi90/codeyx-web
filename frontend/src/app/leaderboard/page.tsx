@@ -163,8 +163,22 @@ export default function LeaderboardPage() {
       filtered.sort((a, b) => b.rating - a.rating);
     } 
     else if (activeLeaderboard === 'Contest Leaderboard') {
-      // Sort primarily by raw combined contest rating descending!
-      filtered.sort((a, b) => (b.rawCombinedRating || 0) - (a.rawCombinedRating || 0));
+      // Normalize raw rating to 0-100 scale, then add contests
+      filtered = filtered.map(row => {
+        const normalizedRating = Math.min(100, Math.round(((row.rawCombinedRating || 0) / 3000) * 100));
+        return { ...row, calculatedContestScore: normalizedRating + (row.contests || 0) };
+      });
+
+      // Sort by Contest Rating (rating + contests) primarily
+      filtered.sort((a, b) => {
+        if (b.calculatedContestScore !== a.calculatedContestScore) {
+          return b.calculatedContestScore - a.calculatedContestScore;
+        }
+        if ((b.contests || 0) !== (a.contests || 0)) {
+          return (b.contests || 0) - (a.contests || 0);
+        }
+        return (b.rating || 0) - (a.rating || 0);
+      });
     }
 
     // 2. Apply Platform filter
@@ -845,8 +859,8 @@ export default function LeaderboardPage() {
                   </div>
 
                   <div className="flex flex-col items-end shrink-0 z-10">
-                    <span className="text-sm font-black text-white">{user.rating}</span>
-                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Score</span>
+                    <span className="text-sm font-black text-white">{activeLeaderboard === 'Contest Leaderboard' ? (user.calculatedContestScore || 0).toLocaleString() : user.rating}</span>
+                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{activeLeaderboard === 'Contest Leaderboard' ? 'Rating' : 'Score'}</span>
                   </div>
                 </div>
               );
@@ -863,11 +877,11 @@ export default function LeaderboardPage() {
                 <div className="col-span-1 text-center flex items-center justify-center">Rank</div>
                 <div className="col-span-4 flex items-center gap-2"><Star size={12}/> User</div>
                 <div className="col-span-2 flex items-center gap-1 justify-end">
-                  <span className="text-[#FF8A00]/70">Codeyx</span>&nbsp;Score
+                  <span className="text-[#FF8A00]/70">{activeLeaderboard === 'Contest Leaderboard' ? 'Contest' : 'Codeyx'}</span>&nbsp;{activeLeaderboard === 'Contest Leaderboard' ? 'Rating' : 'Score'}
                   <span title="Weighted score from 5 radar factors: Problem Solving (30%) + Contest (25%) + Accuracy (20%) + Consistency (15%) + Speed (10%)" className="ml-1 w-3.5 h-3.5 rounded-full border border-gray-600 text-gray-600 text-[8px] flex items-center justify-center cursor-help shrink-0">?</span>
                 </div>
                 <div className="col-span-2 text-right flex items-center justify-end">Problems Solved</div>
-                <div className="col-span-1 text-right flex items-center justify-end">{activeLeaderboard === 'Contest Leaderboard' ? 'Rating' : 'Contests'}</div>
+                <div className="col-span-1 text-right flex items-center justify-end">Contests</div>
                 <div className="col-span-1 text-right flex items-center justify-end leading-tight">Win Rate</div>
                 <div className="col-span-1 text-center flex items-center justify-center">Badge</div>
              </div>
@@ -946,7 +960,7 @@ export default function LeaderboardPage() {
                       <div className="col-span-2 flex items-center justify-end">
                         {row.hasData ? (
                           <span className="font-black text-[15px]" style={{ color: row.rank === 1 ? '#eab308' : row.rank === 2 ? '#c084fc' : row.rank === 3 ? '#FF8A00' : '#3b82f6' }}>
-                            {row.rating}
+                            {activeLeaderboard === 'Contest Leaderboard' ? (row.calculatedContestScore || 0).toLocaleString() : row.rating}
                           </span>
                         ) : (
                           <span className="text-xs font-bold text-gray-700 italic">—</span>
@@ -962,12 +976,10 @@ export default function LeaderboardPage() {
                         )}
                       </div>
 
-                      {/* Contests or Contest Rating */}
+                      {/* Contests */}
                       <div className="col-span-1 flex items-center justify-end text-sm font-bold">
                         {row.hasData ? (
-                          <span className="text-gray-300">
-                            {activeLeaderboard === 'Contest Leaderboard' ? (row.rawCombinedRating || 0).toLocaleString() : row.contests}
-                          </span>
+                          <span className="text-gray-300">{row.contests}</span>
                         ) : (
                           <span className="text-gray-700 italic">—</span>
                         )}

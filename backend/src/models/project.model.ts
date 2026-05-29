@@ -17,6 +17,7 @@ export interface IProject extends Document {
   liveUrl: string;
   techStack: string[];
   screenshotUrl: string;
+  galleryUrls?: string[];
   featured: boolean;
   visibility: 'public' | 'private';
   deploymentStatus: string;
@@ -42,6 +43,7 @@ const projectSchema = new Schema<IProject>(
     liveUrl: { type: String, default: '' },
     techStack: [{ type: String }],
     screenshotUrl: { type: String, default: '' },
+    galleryUrls: [{ type: String }],
     featured: { type: Boolean, default: false },
     visibility: { type: String, enum: ['public', 'private'], default: 'private', index: true },
     deploymentStatus: { type: String, default: '' },

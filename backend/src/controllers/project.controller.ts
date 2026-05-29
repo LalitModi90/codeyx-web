@@ -67,7 +67,7 @@ export const syncGithubReposAsProjects = async (userId: string, username: string
           techStack,
           stars: repo.stars || 0,
           forks: repo.forks || 0,
-          visibility: (repo.visibility && repo.visibility.toLowerCase() === 'public') ? 'public' : 'private',
+          visibility: 'private',
           deploymentStatus: repo.hasDeployment ? 'Active' : '',
           deploymentProvider: repo.deploymentProvider || 'Source Only',
         });
@@ -91,7 +91,7 @@ export const createProject = async (req: Request, res: Response) => {
     const userId = (req as any).auth?.userId || req.body.userId;
     if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const { title, description, githubUrl, liveUrl, techStack, screenshotUrl, visibility, featured, isRepo, repoName } = req.body;
+    const { title, description, githubUrl, liveUrl, techStack, screenshotUrl, galleryUrls, visibility, featured, isRepo, repoName } = req.body;
 
     let uploadedScreenshotUrl = screenshotUrl || '';
     if (screenshotUrl && screenshotUrl.startsWith('data:')) {
@@ -102,6 +102,23 @@ export const createProject = async (req: Request, res: Response) => {
       }
     }
 
+    let uploadedGalleryUrls: string[] = [];
+    if (Array.isArray(galleryUrls)) {
+      for (const url of galleryUrls) {
+        if (url && url.startsWith('data:')) {
+          try {
+            const uploaded = await uploadBase64ToCloudinary(url, userId);
+            uploadedGalleryUrls.push(uploaded);
+          } catch (uploadErr) {
+            console.error('Cloudinary upload error for gallery:', uploadErr);
+          }
+        } else if (url) {
+          uploadedGalleryUrls.push(url);
+        }
+      }
+      uploadedGalleryUrls = uploadedGalleryUrls.slice(0, 4); // Max 4 images
+    }
+
     const project = await Project.create({
       userId,
       title,
@@ -110,6 +127,7 @@ export const createProject = async (req: Request, res: Response) => {
       liveUrl: liveUrl || '',
       techStack: Array.isArray(techStack) ? techStack : (techStack ? techStack.split(',').map((s: string) => s.trim()) : []),
       screenshotUrl: uploadedScreenshotUrl,
+      galleryUrls: uploadedGalleryUrls,
       visibility: visibility || 'private',
       featured: featured || false,
       isRepo: isRepo || false,
@@ -169,9 +187,26 @@ export const updateProject = async (req: Request, res: Response) => {
       }
     }
 
+    if (Array.isArray(req.body.galleryUrls)) {
+      const newGalleryUrls: string[] = [];
+      for (const url of req.body.galleryUrls) {
+        if (url && url.startsWith('data:')) {
+          try {
+            const uploaded = await uploadBase64ToCloudinary(url, userId);
+            newGalleryUrls.push(uploaded);
+          } catch (uploadErr) {
+            console.error('Cloudinary upload error for gallery:', uploadErr);
+          }
+        } else if (url) {
+          newGalleryUrls.push(url);
+        }
+      }
+      req.body.galleryUrls = newGalleryUrls.slice(0, 4);
+    }
+
     const fields = [
       'title', 'description', 'githubUrl', 'liveUrl', 'techStack', 
-      'screenshotUrl', 'visibility', 'featured', 'deploymentStatus', 'deploymentProvider'
+      'screenshotUrl', 'galleryUrls', 'visibility', 'featured', 'deploymentStatus', 'deploymentProvider'
     ];
 
     fields.forEach(field => {
@@ -381,6 +416,15 @@ export const getAllPublicProjects = async (req: Request, res: Response) => {
         }
       },
       {
+        $lookup: {
+          from: 'profiles',
+          localField: 'userId',
+          foreignField: 'userId',
+          as: 'profileInfo'
+        }
+      },
+      { $match: { $or: [ { 'userInfo.0': { $exists: true } }, { 'profileInfo.0': { $exists: true } } ] } },
+      {
         $project: {
           title: 1,
           userId: 1,
@@ -391,6 +435,7 @@ export const getAllPublicProjects = async (req: Request, res: Response) => {
           liveUrl: 1,
           techStack: 1,
           screenshotUrl: 1,
+          galleryUrls: 1,
           visibility: 1,
           featured: 1,
           stars: 1,
@@ -398,9 +443,18 @@ export const getAllPublicProjects = async (req: Request, res: Response) => {
           createdAt: 1,
           ratings: 1,
           author: {
-            username: { $ifNull: [ { $arrayElemAt: ['$githubInfo.username', 0] }, 'developer' ] },
-            name: { $concat: [ { $ifNull: [{ $arrayElemAt: ['$userInfo.firstName', 0] }, 'Developer'] }, ' ', { $ifNull: [{ $arrayElemAt: ['$userInfo.lastName', 0] }, ''] } ] },
-            avatarUrl: { $ifNull: [ { $arrayElemAt: ['$userInfo.avatarUrl', 0] }, '' ] }
+            username: { $ifNull: [ { $arrayElemAt: ['$profileInfo.username', 0] }, { $ifNull: [ { $arrayElemAt: ['$githubInfo.username', 0] }, 'developer' ] } ] },
+            name: { $ifNull: [ { $arrayElemAt: ['$profileInfo.name', 0] }, { $concat: [ { $ifNull: [{ $arrayElemAt: ['$userInfo.firstName', 0] }, 'Developer'] }, ' ', { $ifNull: [{ $arrayElemAt: ['$userInfo.lastName', 0] }, ''] } ] } ] },
+            avatarUrl: { 
+              $cond: [
+                { $and: [ 
+                  { $ne: [{ $arrayElemAt: ['$userInfo.avatarUrl', 0] }, null] }, 
+                  { $ne: [{ $arrayElemAt: ['$userInfo.avatarUrl', 0] }, ''] } 
+                ] },
+                { $arrayElemAt: ['$userInfo.avatarUrl', 0] },
+                { $ifNull: [{ $arrayElemAt: ['$githubInfo.stats.avatar', 0] }, ''] }
+              ]
+            }
           }
         }
       }

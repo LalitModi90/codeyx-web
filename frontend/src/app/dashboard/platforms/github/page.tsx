@@ -32,6 +32,11 @@ const getLanguageColor = (lang: string) => {
     Go:'#00ADD8', Java:'#b07219', 'C++':'#f34b7d', Rust:'#dea584',
     HTML:'#e34c26', CSS:'#563d7c', Vue:'#41b883', Ruby:'#701516',
     'C#':'#178600', Dart:'#00B4AB', Shell:'#89e051', Swift:'#fa7343',
+    React:'#61dafb', 'Next.js':'#000000', 'Tailwind CSS':'#38bdf8',
+    'Node.js':'#339933', Express:'#000000', MongoDB:'#47A248',
+    GraphQL:'#e10098', Docker:'#2496ed', AWS:'#FF9900',
+    SCSS:'#c6538c', LESS:'#1d365d', PHP:'#4F5D95', Kotlin:'#A97BFF',
+    Svelte:'#ff3e00', 'Vue.js':'#41b883', Angular:'#dd1b16',
   };
   return m[lang] || '#8b949e';
 };

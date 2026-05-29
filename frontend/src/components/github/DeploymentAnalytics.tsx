@@ -6,10 +6,10 @@ import { Rocket, CheckCircle, ExternalLink, Globe } from 'lucide-react';
 interface Props { repositories: any[]; }
 
 const PROVIDER_CONFIG: Record<string, { color: string; bg: string; dot: string }> = {
-  'Vercel':         { color: 'text-white',      bg: 'bg-black/60 border-white/15',          dot: 'bg-white' },
-  'Netlify':        { color: 'text-teal-300',   bg: 'bg-teal-900/30 border-teal-500/20',    dot: 'bg-teal-400' },
-  'GitHub Pages':   { color: 'text-[#58A6FF]', bg: 'bg-blue-900/20 border-blue-500/20',    dot: 'bg-[#58A6FF]' },
-  'Custom Hosting': { color: 'text-purple-300', bg: 'bg-purple-900/20 border-purple-500/20',dot: 'bg-purple-400' },
+  'Vercel':         { color: 'text-[var(--text-main)]', bg: 'bg-[#161B22]/60 border-[#30363D]',       dot: 'bg-[var(--text-main)]' },
+  'Netlify':        { color: 'text-teal-300',           bg: 'bg-teal-900/30 border-teal-500/20',      dot: 'bg-teal-400' },
+  'GitHub Pages':   { color: 'text-[#58A6FF]',          bg: 'bg-blue-900/20 border-blue-500/20',      dot: 'bg-[#58A6FF]' },
+  'Custom Hosting': { color: 'text-purple-300',         bg: 'bg-purple-900/20 border-purple-500/20',  dot: 'bg-purple-400' },
 };
 
 export default function DeploymentAnalytics({ repositories }: Props) {

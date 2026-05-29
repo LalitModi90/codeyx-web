@@ -61,15 +61,6 @@ export const clerkWebhookHandler = async (req: Request, res: Response) => {
     if (eventType === 'user.created') {
       const email = evt.data.email_addresses[0]?.email_address;
       
-      // Auto Create User
-      const user = await User.create({
-        clerkUserId: id,
-        email: email,
-        firstName: evt.data.first_name || '',
-        lastName: evt.data.last_name || '',
-        avatarUrl: evt.data.image_url || '',
-      });
-
       const firstName = evt.data.first_name || '';
       const lastName = evt.data.last_name || '';
       const fullName = `${firstName} ${lastName}`.trim();
@@ -92,11 +83,22 @@ export const clerkWebhookHandler = async (req: Request, res: Response) => {
         attempts++;
       }
 
-      // Auto Create Profile with initial name and username
+      // Auto Create User
+      const user = await User.create({
+        clerkUserId: id,
+        email: email,
+        firstName,
+        lastName,
+        avatarUrl: evt.data.image_url || '',
+        username: newUsername,
+      });
+
+      // Auto Create Profile with initial name, username, and email
       await Profile.create({
         userId: id,
         name: fullName,
         username: newUsername,
+        email: email || '',
       });
 
       console.log(`[Webhook] System setup complete for new user: ${id}`);

@@ -47,8 +47,8 @@ export class GitHubProvider implements IProfileProvider {
     const orgs = Array.isArray(orgsRes.data) ? orgsRes.data : [];
     const events = Array.isArray(eventsRes.data) ? eventsRes.data : [];
 
-    // 1. Fetch GraphQL Contribution Calendar (If token is available)
     let contributionsCollection: any = null;
+    let graphRepos: any[] = [];
     if (token) {
       try {
         const graphqlQuery = `
@@ -61,6 +61,19 @@ export class GitHubProvider implements IProfileProvider {
                     contributionDays {
                       contributionCount
                       date
+                    }
+                  }
+                }
+              }
+              repositories(first: 100, ownerAffiliations: OWNER, isFork: false, orderBy: {field: UPDATED_AT, direction: DESC}) {
+                nodes {
+                  name
+                  languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
+                    edges {
+                      size
+                      node {
+                        name
+                      }
                     }
                   }
                 }
@@ -78,8 +91,9 @@ export class GitHubProvider implements IProfileProvider {
           }
         );
         contributionsCollection = graphData?.user?.contributionsCollection;
+        graphRepos = graphData?.user?.repositories?.nodes || [];
       } catch (e: any) {
-        console.warn('[GitHubProvider] GraphQL contribution calendar fetch failed:', e.message);
+        console.warn('[GitHubProvider] GraphQL fetch failed:', e.message);
       }
     }
 
@@ -118,12 +132,57 @@ export class GitHubProvider implements IProfileProvider {
     });
 
     // 3. Process Language Analytics
+    const topicToTech: Record<string, string> = {
+      'react': 'React', 'reactjs': 'React', 'nextjs': 'Next.js', 'next': 'Next.js',
+      'tailwindcss': 'Tailwind CSS', 'tailwind': 'Tailwind CSS',
+      'css': 'CSS', 'css3': 'CSS', 'html': 'HTML', 'html5': 'HTML',
+      'nodejs': 'Node.js', 'node': 'Node.js', 'express': 'Express', 'expressjs': 'Express',
+      'mongodb': 'MongoDB', 'mongo': 'MongoDB', 'docker': 'Docker', 'graphql': 'GraphQL',
+      'aws': 'AWS', 'vue': 'Vue.js', 'vuejs': 'Vue.js', 'svelte': 'Svelte', 'angular': 'Angular',
+      'scss': 'SCSS', 'sass': 'SCSS', 'less': 'LESS', 'spring-boot': 'Spring Boot', 'spring': 'Spring Boot',
+      'django': 'Django', 'flask': 'Flask', 'pytorch': 'PyTorch', 'tensorflow': 'TensorFlow'
+    };
+
     const languageCounts: Record<string, number> = {};
     const languageSizes: Record<string, number> = {};
+    
+    const graphLangMap = new Map();
+    graphRepos.forEach((repo: any) => {
+      if (repo.name && repo.languages?.edges) {
+        graphLangMap.set(repo.name.toLowerCase(), repo.languages.edges);
+      }
+    });
+
     repos.forEach((r: any) => {
-      if (r.language) {
+      const addedToRepo = new Set<string>();
+      const repoName = r.name?.toLowerCase();
+      const realLanguages = graphLangMap.get(repoName);
+      
+      if (realLanguages && realLanguages.length > 0) {
+        realLanguages.forEach((edge: any) => {
+          const langName = edge.node?.name;
+          const langSize = edge.size;
+          if (langName) {
+            languageCounts[langName] = (languageCounts[langName] || 0) + 1;
+            languageSizes[langName] = (languageSizes[langName] || 0) + langSize;
+            addedToRepo.add(langName.toLowerCase());
+          }
+        });
+      } else if (r.language) {
         languageCounts[r.language] = (languageCounts[r.language] || 0) + 1;
         languageSizes[r.language] = (languageSizes[r.language] || 0) + (r.size || 1);
+        addedToRepo.add(r.language.toLowerCase());
+      }
+      
+      if (Array.isArray(r.topics)) {
+        r.topics.forEach((t: string) => {
+          const tech = topicToTech[t.toLowerCase()];
+          if (tech && !addedToRepo.has(tech.toLowerCase())) {
+            languageCounts[tech] = (languageCounts[tech] || 0) + 1;
+            languageSizes[tech] = (languageSizes[tech] || 0) + ((r.size || 1) * 0.5);
+            addedToRepo.add(tech.toLowerCase());
+          }
+        });
       }
     });
 

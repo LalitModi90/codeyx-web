@@ -227,6 +227,8 @@ html:not(.dark) .bg-\[\#150F0A\]\/80 { background-color: rgba(255, 251, 245, 0.9
 /* ── GitHub specific (#0D1117, #161B22) ── */
 html:not(.dark) .bg-\[\#0D1117\] { background-color: #F6F8FA !important; }
 html:not(.dark) .bg-\[\#0D1117\]\/50 { background-color: rgba(246, 248, 250, 0.5) !important; }
+html:not(.dark) .bg-\[\#0D1117\]\/80 { background-color: rgba(246, 248, 250, 0.8) !important; }
+html:not(.dark) .bg-\[\#0D1117\]\/90 { background-color: rgba(246, 248, 250, 0.9) !important; }
 html:not(.dark) .bg-\[\#161B22\] { background-color: #FFFFFF !important; }
 html:not(.dark) .bg-\[\#161B22\]\/50 { background-color: rgba(255, 255, 255, 0.5) !important; }
 html:not(.dark) .bg-\[\#161B22\]\/60 { background-color: rgba(255, 255, 255, 0.7) !important; }

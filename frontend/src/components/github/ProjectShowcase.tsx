@@ -31,6 +31,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   // Rating & Detail modal states
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
@@ -38,6 +39,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
   const [userComment, setUserComment] = useState<string>('');
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [ratingError, setRatingError] = useState('');
+  const [showVisibilityTour, setShowVisibilityTour] = useState(false);
 
   const isOwner = !userId || user?.id === userId;
 
@@ -88,6 +90,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
     githubUrl: '',
     liveUrl: '',
     screenshotUrl: '',
+    galleryUrls: [] as string[],
     visibility: 'private',
     featured: false
   });
@@ -111,6 +114,20 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
     loadProjects();
   }, [userId]);
 
+  useEffect(() => {
+    if (isOwner && typeof window !== 'undefined') {
+      const tourDone = localStorage.getItem('codeyx_visibility_tour');
+      if (!tourDone) {
+        setShowVisibilityTour(true);
+      }
+    }
+  }, [isOwner]);
+
+  const closeTour = () => {
+    setShowVisibilityTour(false);
+    localStorage.setItem('codeyx_visibility_tour', 'done');
+  };
+
   const handleOpenEdit = (repo: any) => {
     // Find matching project in DB
     const match = dbProjects.find(p => p._id === repo.dbId || p.repoName === repo.name || p.title === repo.name);
@@ -124,6 +141,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
         githubUrl: match.githubUrl || repo.githubUrl || '',
         liveUrl: match.liveUrl || repo.homepage || '',
         screenshotUrl: match.screenshotUrl || '',
+        galleryUrls: match.galleryUrls || [],
         visibility: match.visibility || 'private',
         featured: match.featured || false
       });
@@ -137,6 +155,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
         githubUrl: `https://github.com/${repo.name}`,
         liveUrl: repo.homepage || '',
         screenshotUrl: '',
+        galleryUrls: [],
         visibility: 'private',
         featured: false
       });
@@ -152,19 +171,54 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
       githubUrl: '',
       liveUrl: '',
       screenshotUrl: '',
+      galleryUrls: [],
       visibility: 'public',
       featured: false
     });
   };
 
-  const handleDeleteProject = async (projectId: string) => {
-    if (!window.confirm('Are you sure you want to delete this project?')) return;
+  const handleDeleteProject = (projectId: string) => {
+    setProjectToDelete(projectId);
+  };
+
+  const confirmDelete = async () => {
+    if (!projectToDelete) return;
     try {
-      await projectService.deleteProject(projectId);
+      await projectService.deleteProject(projectToDelete);
       await loadProjects();
     } catch (err) {
       console.error('Failed to delete project:', err);
-      alert('Failed to delete project. Please try again.');
+      setErrorMsg('Failed to delete project. Please try again.');
+    } finally {
+      setProjectToDelete(null);
+    }
+  };
+
+  const handleToggleVisibility = async (e: React.MouseEvent, repo: any) => {
+    e.stopPropagation();
+    const newVisibility = repo.visibility === 'public' ? 'private' : 'public';
+    try {
+      if (!repo.dbId) {
+        // Auto-create the project in DB if it doesn't exist yet
+        await projectService.createProject({
+          title: repo.name,
+          description: repo.description || '',
+          techStack: repo.language || '',
+          githubUrl: `https://github.com/${repo.name}`,
+          liveUrl: repo.homepage || '',
+          screenshotUrl: '',
+          visibility: newVisibility,
+          featured: false,
+          isRepo: true,
+          repoName: repo.name
+        });
+      } else {
+        await projectService.updateProject(repo.dbId, { visibility: newVisibility });
+      }
+      await loadProjects();
+    } catch (err) {
+      console.error('Failed to toggle visibility:', err);
+      setErrorMsg('Failed to update visibility. Please try again.');
     }
   };
 
@@ -188,6 +242,33 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
       setErrorMsg('Failed to read image file.');
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const currentCount = formData.galleryUrls.length;
+    if (currentCount + files.length > 4) {
+      setErrorMsg('You can only upload up to 4 gallery images.');
+      return;
+    }
+
+    const sizeLimit = 1 * 1024 * 1024;
+    Array.from(files).forEach(file => {
+      if (file.size > sizeLimit) {
+        setErrorMsg('Each image must be under 1MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ 
+          ...prev, 
+          galleryUrls: [...prev.galleryUrls, reader.result as string].slice(0, 4) 
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const [errorMsg, setErrorMsg] = useState('');
@@ -242,6 +323,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
       githubUrl: dbMatch?.githubUrl || `https://github.com/${repo.name}`,
       techStack: dbMatch?.techStack || [repo.language].filter(l => l && l !== 'Unknown'),
       screenshotUrl: dbMatch?.screenshotUrl || '',
+      galleryUrls: dbMatch?.galleryUrls || [],
       visibility: dbMatch?.visibility || 'private',
       featured: dbMatch?.featured || false,
       stars: repo.stars || 0,
@@ -264,6 +346,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
         githubUrl: proj.githubUrl || '',
         techStack: proj.techStack || [],
         screenshotUrl: proj.screenshotUrl || '',
+        galleryUrls: proj.galleryUrls || [],
         visibility: proj.visibility || 'private',
         featured: proj.featured || false,
         stars: proj.stars || 0,
@@ -366,7 +449,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
               onClick={() => setSelectedProject(repo)}
-              className="group p-5 rounded-2xl border bg-[#0D1117]/80 border-[#30363D] hover:border-[#58A6FF]/30 hover:shadow-[0_0_24px_rgba(88,166,255,0.06)] transition-all duration-300 relative overflow-hidden flex flex-col gap-3 cursor-pointer"
+              className="group p-5 rounded-xl border bg-[#111216] border-white/5 hover:border-[#58A6FF]/40 hover:bg-[#111216]/80 hover:shadow-[0_0_24px_rgba(88,166,255,0.1)] transition-all duration-300 relative overflow-hidden flex flex-col gap-3 cursor-pointer"
             >
               {/* Overlay Thumbnail Preview */}
               {repo.screenshotUrl && (
@@ -392,10 +475,52 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
                       <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded border ${badge.bg} ${badge.color}`}>
                         {repo.deploymentProvider}
                       </span>
-                      <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded border flex items-center gap-0.5 ${repo.visibility === 'public' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-white/[0.02] border-white/5 text-gray-500'}`}>
-                        {repo.visibility === 'public' ? <Globe className="w-2 h-2"/> : <Lock className="w-2 h-2"/>}
-                        {repo.visibility}
-                      </span>
+                      {isOwner ? (
+                        <div className="relative">
+                          {i === 0 && showVisibilityTour && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9 }}
+                              className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-48 bg-[#58A6FF] p-3 rounded-2xl shadow-[0_10px_30px_rgba(88,166,255,0.3)] z-50"
+                            >
+                              <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#58A6FF] rotate-45" />
+                              <div className="flex flex-col items-center gap-2 relative z-10">
+                                <p className="text-black text-[10px] font-black leading-tight text-center uppercase tracking-wide">
+                                  Click here to toggle your project between Public and Private!
+                                </p>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); closeTour(); }}
+                                  className="w-full py-1.5 bg-black/10 hover:bg-black/20 rounded-lg text-black text-[9px] font-extrabold uppercase transition-colors"
+                                >
+                                  Got it
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                          <button
+                            onClick={(e) => handleToggleVisibility(e, repo)}
+                            className={`group flex items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all duration-300 ${
+                              repo.visibility === 'public' 
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' 
+                                : 'bg-white/[0.02] border-white/10 text-gray-500 hover:bg-white/[0.05] hover:text-gray-300'
+                            } ${i === 0 && showVisibilityTour ? 'ring-2 ring-[#58A6FF] ring-offset-2 ring-offset-[#0D1117] relative z-40' : ''}`}
+                            title="Toggle visibility"
+                          >
+                            <div className={`relative w-5 h-2.5 rounded-full transition-colors duration-300 flex items-center ${repo.visibility === 'public' ? 'bg-emerald-500/40' : 'bg-white/20'}`}>
+                              <div className={`absolute w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300 ${repo.visibility === 'public' ? 'translate-x-2.5 shadow-emerald-500/50' : '-translate-x-0.5 shadow-black/50'}`} />
+                            </div>
+                            <span className="text-[8px] font-black uppercase tracking-widest mt-0.5">
+                              {repo.visibility}
+                            </span>
+                          </button>
+                        </div>
+                      ) : (
+                        <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded border flex items-center gap-0.5 ${repo.visibility === 'public' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-white/[0.02] border-white/5 text-gray-500'}`}>
+                          {repo.visibility === 'public' ? <Globe className="w-2 h-2"/> : <Lock className="w-2 h-2"/>}
+                          {repo.visibility}
+                        </span>
+                      )}
                       {repo.ratings && repo.ratings.length > 0 && (
                         <span className="text-[7px] font-black uppercase px-1 py-0.5 rounded border bg-yellow-500/10 border-yellow-500/20 text-yellow-400 flex items-center gap-0.5">
                           <Star className="w-2 h-2 fill-current" />
@@ -418,7 +543,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
-                    {repo.dbId && (
+                    {repo.dbId && !repo.isRepo && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -484,6 +609,47 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
         })}
       </div>
 
+      {/* DELETE CONFIRMATION DIALOG */}
+      <AnimatePresence>
+        {projectToDelete && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#0D1117] border border-rose-500/20 rounded-2xl p-6 shadow-[0_0_40px_rgba(244,63,94,0.15)] max-w-sm w-full relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="flex flex-col items-center text-center gap-4 relative z-10">
+                <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-rose-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white uppercase tracking-wide">Delete Project?</h3>
+                  <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                    This action cannot be undone. Are you absolutely sure you want to delete this project from your showcase?
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 w-full mt-4">
+                  <button
+                    onClick={() => setProjectToDelete(null)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-gray-300 hover:text-white text-xs font-bold transition-all border border-[#30363D]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-black uppercase text-xs transition-all"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* EDITING DIALOG / DRAWER */}
       <AnimatePresence>
         {editingProject && (
@@ -492,11 +658,11 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
               initial={{ scale: 0.95, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 12 }}
-              className="w-full max-w-lg bg-[#0d1117] border border-[#30363D] rounded-3xl p-6 shadow-2xl relative overflow-hidden"
+              className="w-full max-w-2xl bg-[#0D1117] border border-[#30363D] rounded-xl p-6 shadow-2xl relative overflow-hidden flex flex-col max-h-[80vh]"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#58A6FF]/5 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 shrink-0">
                 <div className="flex items-center gap-2">
                   <Edit3 className="w-4 h-4 text-[#58A6FF]" />
                   <h3 className="font-extrabold text-sm uppercase tracking-wider text-white">Configure Public Showcase</h3>
@@ -517,8 +683,9 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
                   <p className="text-xs font-black uppercase tracking-wider">{successMsg}</p>
                 </div>
               ) : (
-                <form onSubmit={handleSave} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden min-h-0 mt-2">
+                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2 space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
                       <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Project Name / Title</label>
                       <input
@@ -614,6 +781,48 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
                         </div>
                       )}
                     </div>
+
+                    <div className="col-span-2 mt-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest">Project Gallery (Up to 4 images)</label>
+                        <span className="text-[8px] font-bold text-gray-600">{formData.galleryUrls.length} / 4</span>
+                      </div>
+                      
+                      {formData.galleryUrls.length < 4 && (
+                        <label className="flex items-center justify-center w-full py-3 bg-white/[0.02] border border-dashed border-white/10 rounded-xl hover:bg-white/[0.05] hover:border-emerald-500/30 text-gray-400 hover:text-white transition-all text-xs font-bold cursor-pointer">
+                          <Plus className="w-3.5 h-3.5 mr-1" /> Add Gallery Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleGalleryUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+
+                      {formData.galleryUrls.length > 0 && (
+                        <div className="grid grid-cols-4 gap-2 mt-2">
+                          {formData.galleryUrls.map((url, idx) => (
+                            <div key={idx} className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10 bg-[#161b22]">
+                              <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newUrls = [...formData.galleryUrls];
+                                  newUrls.splice(idx, 1);
+                                  setFormData(prev => ({ ...prev, galleryUrls: newUrls }));
+                                }}
+                                className="absolute top-1 right-1 p-0.5 bg-black/80 hover:bg-black text-gray-400 hover:text-white rounded-full transition-all"
+                                title="Remove image"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between bg-black/20 border border-[#30363D] rounded-xl p-3 mt-3">
@@ -645,7 +854,9 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
                     </div>
                   )}
 
-                  <div className="flex gap-2 justify-end pt-4 border-t border-[#30363D]">
+                  </div>
+
+                  <div className="flex gap-2 justify-end pt-4 border-t border-[#30363D] mt-4 shrink-0">
                     <button
                       type="button"
                       onClick={() => setEditingProject(null)}
@@ -673,7 +884,7 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-4xl bg-[#0D1117] border border-[#30363D] rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(88,166,255,0.15)] flex flex-col md:flex-row max-h-[85vh]"
+              className="relative w-full max-w-[1100px] bg-[#0D1117] border border-[#30363D] rounded-xl overflow-hidden shadow-[0_0_50px_rgba(88,166,255,0.15)] flex flex-col md:flex-row h-[75vh] max-h-[750px]"
             >
               {/* Close Button */}
               <button
@@ -689,6 +900,20 @@ export default function ProjectShowcase({ repositories, userId }: Props) {
                 {selectedProject.screenshotUrl && (
                   <div className="w-full h-44 rounded-2xl overflow-hidden border border-white/5 bg-[#161b22] relative group shrink-0">
                     <img src={selectedProject.screenshotUrl} alt={selectedProject.name} className="w-full h-full object-cover" />
+                  </div>
+                )}
+
+                {/* GALLERY GRID */}
+                {selectedProject.galleryUrls && selectedProject.galleryUrls.length > 0 && (
+                  <div className="space-y-1.5">
+                    <h4 className="text-[9px] font-black uppercase tracking-widest text-gray-500">Project Gallery</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedProject.galleryUrls.map((url: string, idx: number) => (
+                        <div key={idx} className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/5 bg-[#161b22]">
+                          <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

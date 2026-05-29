@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOnboarding } from './OnboardingProvider';
 import { useUser } from '@clerk/nextjs';
 import { User, CheckCircle2, XCircle, Loader2, Sparkles, ChevronRight } from 'lucide-react';
+import { profileService } from '@/services/profile.service';
 
 export default function UsernameSetupModal() {
   const { profile, completeUsernameSetup } = useOnboarding();
@@ -25,7 +26,9 @@ export default function UsernameSetupModal() {
       if (!firstName && user.firstName) setFirstName(user.firstName);
       if (!lastName && user.lastName) setLastName(user.lastName);
       
-      if (!username) {
+      if (profile.username) {
+        setUsername(profile.username);
+      } else if (!username) {
         const randomDigits = Math.floor(Math.random() * 900000) + 100000;
         let baseName = user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'user';
         // Base name only letters, numbers, underscores
@@ -35,7 +38,7 @@ export default function UsernameSetupModal() {
         setUsername(`${baseName}_${randomDigits}`);
       }
     }
-  }, [isLoaded, isSignedIn, user]);
+  }, [isLoaded, isSignedIn, user, profile.username]);
 
   // Handle username check debouncing
   useEffect(() => {
@@ -87,10 +90,10 @@ export default function UsernameSetupModal() {
     
     setIsSaving(true);
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/profile/update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, username, name: `${firstName} ${lastName}`.trim() })
+      await profileService.updateProfile({
+        userId: user?.id,
+        username,
+        name: `${firstName} ${lastName}`.trim()
       });
     } catch (err) {
       console.error('Failed to reserve username in DB:', err);

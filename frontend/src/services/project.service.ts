@@ -39,5 +39,9 @@ export const projectService = {
 
   addProjectRating: async (projectId: string, data: { rating: number; comment: string; username: string; userAvatar?: string }) => {
     return api.post(`/projects/rate/${projectId}`, data);
+  },
+
+  toggleProjectLike: async (projectId: string) => {
+    return api.post(`/projects/like/${projectId}`);
   }
 };

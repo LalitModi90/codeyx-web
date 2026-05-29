@@ -23,6 +23,7 @@ export default function ExploreProjectsPage() {
   const [sortBy, setSortBy] = useState<'latest' | 'stars' | 'rated'>('latest');
 
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 6;
 
@@ -69,12 +70,12 @@ export default function ExploreProjectsPage() {
         username: user?.username || user?.fullName || 'Anonymous',
         userAvatar: user?.imageUrl || ''
       });
-      
+
       const updatedProj = res.data;
-      
+
       // Reload projects list to keep sync
       await fetchPublicProjects();
-      
+
       // Update selected project state
       setSelectedProject((prev: any) => ({
         ...prev,
@@ -109,7 +110,7 @@ export default function ExploreProjectsPage() {
 
       // 2. Tag Category Match
       if (selectedTag === 'All') return isSearchMatch;
-      
+
       const tagLower = selectedTag.toLowerCase();
       let isTagMatch = false;
       if (tagLower === 'web') {
@@ -121,7 +122,7 @@ export default function ExploreProjectsPage() {
       } else if (tagLower === 'open source') {
         isTagMatch = p.isRepo === true;
       }
-      
+
       return isSearchMatch && isTagMatch;
     })
     .sort((a, b) => {
@@ -203,11 +204,10 @@ export default function ExploreProjectsPage() {
                     setSelectedTag(tag);
                     setCurrentPage(0);
                   }}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    selectedTag === tag
-                      ? 'bg-[#FF8A00]/10 border border-[#FF8A00]/20 text-[#FF8A00]'
-                      : 'text-gray-400 hover:text-white border border-transparent'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${selectedTag === tag
+                    ? 'bg-[#FF8A00]/10 border border-[#FF8A00]/20 text-[#FF8A00]'
+                    : 'text-gray-400 hover:text-white border border-transparent'
+                    }`}
                 >
                   {tag}
                 </button>
@@ -227,11 +227,10 @@ export default function ExploreProjectsPage() {
                 <button
                   key={mode.id}
                   onClick={() => setSortBy(mode.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    sortBy === mode.id
-                      ? 'bg-[#FF8A00]/10 border border-[#FF8A00]/20 text-[#FF8A00]'
-                      : 'text-gray-400 hover:text-white border border-transparent'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${sortBy === mode.id
+                    ? 'bg-[#FF8A00]/10 border border-[#FF8A00]/20 text-[#FF8A00]'
+                    : 'text-gray-400 hover:text-white border border-transparent'
+                    }`}
                 >
                   {mode.label}
                 </button>
@@ -262,16 +261,16 @@ export default function ExploreProjectsPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: (idx % 6) * 0.1 }}
-                  onClick={() => setSelectedProject(proj)}
+                  onClick={() => { setSelectedProject(proj); setActiveImageIndex(0); }}
                   className="bg-[#101014] border border-white/5 rounded-3xl overflow-hidden hover:border-[#FF8A00]/30 hover:shadow-[0_10px_40px_rgba(255,138,0,0.1)] transition-all group cursor-pointer flex flex-col h-full relative"
                 >
                   {/* Card Image */}
                   <div className="h-48 w-full relative overflow-hidden bg-[#18181f]">
                     <div className="absolute inset-0 bg-gradient-to-t from-[#101014] to-transparent z-10" />
-                    <img 
-                      src={proj.screenshotUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400'} 
-                      alt={proj.title} 
-                      className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" 
+                    <img
+                      src={proj.screenshotUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400'}
+                      alt={proj.title}
+                      className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700"
                     />
 
                     <div className="absolute bottom-4 left-6 w-12 h-12 rounded-xl flex items-center justify-center bg-orange-500/10 border border-orange-500/25 shadow-2xl z-20 group-hover:-translate-y-1 transition-transform duration-300">
@@ -284,8 +283,8 @@ export default function ExploreProjectsPage() {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="text-lg font-black text-white group-hover:text-[#FF8A00] transition-colors">{proj.title}</h3>
-                        <Link 
-                          href={`/portfolio/${proj.author?.username}`}
+                        <Link
+                          href={`/profile/${proj.userId}`}
                           onClick={(e) => e.stopPropagation()}
                           className="text-xs font-bold text-gray-500 hover:text-white mt-1 block"
                         >
@@ -396,7 +395,7 @@ export default function ExploreProjectsPage() {
               exit={{ scale: 0.95, opacity: 0, y: 30 }}
               transition={{ type: "spring", duration: 0.6, bounce: 0.25 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-5xl bg-[#0D0E16]/95 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8),_0_0_80px_rgba(255,138,0,0.06)] relative flex flex-col md:flex-row max-h-[90vh]"
+              className="w-full max-w-[1200px] bg-[#0D0E16]/95 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8),_0_0_80px_rgba(255,138,0,0.06)] relative flex flex-col md:flex-row h-[80vh] max-h-[800px]"
             >
               {/* Close Button */}
               <button
@@ -411,27 +410,56 @@ export default function ExploreProjectsPage() {
               {/* Modal Left Side: Immersive Image & Actions */}
               <div className="w-full md:w-[48%] bg-white/[0.01] relative border-r border-white/[0.05] flex flex-col overflow-hidden">
                 <div className="h-80 md:h-[52%] w-full relative bg-[#18181f]/80 overflow-hidden group">
-                  <img 
-                    src={selectedProject.screenshotUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400'} 
-                    alt={selectedProject.title} 
-                    className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0D0E16] via-[#0D0E16]/30 to-transparent" />
+                  {(() => {
+                    const gallery = selectedProject.galleryUrls || selectedProject.gallery || [];
+                    const allImages = [selectedProject.screenshotUrl, ...gallery].filter(Boolean);
+                    const currentImg = allImages[activeImageIndex] || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=400';
+                    return (
+                      <>
+                        <img
+                          src={currentImg}
+                          alt={selectedProject.title}
+                          className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0E16] via-[#0D0E16]/30 to-transparent z-10" />
 
-                  {/* Pulsing Code Pill */}
-                  <div className="absolute bottom-6 left-8 px-4 py-2 rounded-2xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/30 flex items-center gap-2 shadow-[0_0_20px_rgba(255,138,0,0.15)] backdrop-blur-md">
-                    <Code2 size={16} className="text-orange-400 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Interactive</span>
-                  </div>
+                        {/* Pulsing Code Pill */}
+                        <div className="absolute bottom-6 left-6 px-4 py-2 rounded-2xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/30 flex items-center gap-2 shadow-[0_0_20px_rgba(255,138,0,0.15)] backdrop-blur-md z-20">
+                          <Code2 size={16} className="text-orange-400 animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">Interactive</span>
+                        </div>
+
+                        {/* Gallery Thumbnails */}
+                        {allImages.length > 1 && (
+                          <div className="absolute bottom-6 right-6 flex items-center gap-2 z-20 bg-black/40 backdrop-blur-md p-1.5 rounded-2xl border border-white/10">
+                            {allImages.slice(0, 4).map((img, idx) => (
+                              <button
+                                key={idx}
+                                onClick={(e) => { e.stopPropagation(); setActiveImageIndex(idx); }}
+                                className={`w-10 h-10 rounded-xl overflow-hidden border-2 transition-all ${activeImageIndex === idx ? 'border-orange-500 scale-110 shadow-lg' : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'}`}
+                              >
+                                <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                            {allImages.length > 4 && (
+                              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white shadow-inner">
+                                +{allImages.length - 4}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="p-8 flex-1 flex flex-col justify-between gap-6">
                   {/* Action Buttons */}
                   <div className="flex flex-col gap-3">
                     {selectedProject.liveUrl && (
-                      <a 
-                        href={selectedProject.liveUrl} 
-                        target="_blank" 
+                      <a
+                        href={selectedProject.liveUrl}
+                        target="_blank"
                         rel="noreferrer"
                         className="w-full py-4 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 hover:brightness-110 text-black text-sm font-black shadow-[0_10px_30px_rgba(255,138,0,0.25)] hover:shadow-[0_10px_35px_rgba(255,138,0,0.35)] flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all duration-300"
                       >
@@ -440,9 +468,9 @@ export default function ExploreProjectsPage() {
                     )}
 
                     {selectedProject.githubUrl && (
-                      <a 
-                        href={selectedProject.githubUrl} 
-                        target="_blank" 
+                      <a
+                        href={selectedProject.githubUrl}
+                        target="_blank"
                         rel="noreferrer"
                         className="w-full py-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/10 hover:border-orange-500/30 text-white text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all duration-300"
                       >
@@ -467,14 +495,33 @@ export default function ExploreProjectsPage() {
 
               {/* Modal Right Side: Elegant Details Scroll */}
               <div className="w-full md:w-[52%] p-8 md:p-12 overflow-y-auto custom-scrollbar bg-gradient-to-br from-[#0D0E16] via-[#0D0E16] to-orange-500/[0.02] flex flex-col">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="px-2.5 py-1 rounded bg-orange-500/10 border border-orange-500/20 text-[9px] font-black uppercase tracking-widest text-orange-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping" />
-                    Public Showcase
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="px-2.5 py-1 rounded bg-orange-500/10 border border-orange-500/20 text-[9px] font-black uppercase tracking-widest text-orange-400 flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,138,0,0.1)]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping" />
+                      Public Showcase
+                    </div>
+                    <span className="text-xs font-bold text-gray-500">
+                      {selectedProject.createdAt ? new Date(selectedProject.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Active Showcase'}
+                    </span>
                   </div>
-                  <span className="text-xs font-semibold text-gray-500">
-                    {selectedProject.createdAt ? new Date(selectedProject.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Active Showcase'}
-                  </span>
+
+                  <Link
+                    href={`/profile/${selectedProject.userId}`}
+                    className="flex items-center gap-2 group bg-white/[0.02] border border-white/[0.05] hover:border-orange-500/30 hover:bg-orange-500/[0.04] px-5 py-1.5 rounded-xl transition-all mr-32"
+                    onClick={(e) => { e.stopPropagation(); setSelectedProject(null); }}
+                  >
+                    {selectedProject.author?.avatarUrl ? (
+                      <img src={selectedProject.author.avatarUrl} alt={selectedProject.author.username} className="w-5 h-5 rounded-full object-cover border border-white/10 group-hover:border-orange-500/50 transition-colors" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center text-[9px] font-black uppercase">
+                        {selectedProject.author?.username?.charAt(0) || 'D'}
+                      </div>
+                    )}
+                    <span className="text-[10px] font-black text-gray-300 group-hover:text-orange-400 transition-colors">
+                      @{selectedProject.author?.username || 'developer'}
+                    </span>
+                  </Link>
                 </div>
 
                 <h2 className="text-4xl font-black text-white mb-3 leading-tight tracking-tight bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">
@@ -482,9 +529,10 @@ export default function ExploreProjectsPage() {
                 </h2>
                 <div className="flex items-center gap-2 mb-10 text-sm font-medium text-gray-400">
                   <span>Built by</span>
-                  <Link 
-                    href={`/portfolio/${selectedProject.author?.username}`}
+                  <Link
+                    href={`/profile/${selectedProject.userId}`}
                     className="font-bold text-white hover:text-orange-400 hover:underline transition-all flex items-center gap-1"
+                    onClick={(e) => { e.stopPropagation(); setSelectedProject(null); }}
                   >
                     @{selectedProject.author?.username || 'developer'}
                   </Link>
@@ -505,13 +553,47 @@ export default function ExploreProjectsPage() {
                   <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <Code2 size={14} className="text-orange-400" /> Tech Stack Used
                   </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProject.techStack?.map((tech: string, idx: number) => (
-                      <span key={idx} className="px-3.5 py-2 bg-white/[0.02] border border-white/[0.06] rounded-xl text-xs font-bold text-gray-300 hover:border-orange-500/30 hover:bg-orange-500/[0.04] hover:text-orange-300 transition-all cursor-default flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                        {tech}
-                      </span>
-                    ))}
+                  <div className="flex flex-wrap gap-2.5">
+                    {(() => {
+                      const techArr = selectedProject.techStack || [];
+                      let parsed: { category?: string, tech: string }[] = [];
+
+                      techArr.forEach((t: string) => {
+                        const sectionRegex = /([A-Za-z]+):\s*([^:]+?)(?=\s+[A-Za-z]+:|$)/g;
+                        const matches = [...t.matchAll(sectionRegex)];
+
+                        if (matches.length > 0) {
+                          matches.forEach(m => {
+                            parsed.push({ category: m[1].trim(), tech: m[2].trim() });
+                          });
+                        } else {
+                          if (t.includes(',')) {
+                            t.split(',').forEach(item => {
+                              if (item.trim()) parsed.push({ tech: item.trim() });
+                            });
+                          } else {
+                            if (t.trim()) parsed.push({ tech: t.trim() });
+                          }
+                        }
+                      });
+
+                      return parsed.map((item, idx) => (
+                        item.category ? (
+                          <div key={idx} className="px-4 py-3 bg-white/[0.02] border border-white/[0.06] rounded-xl flex flex-col gap-1 w-full sm:w-[calc(50%-0.375rem)] hover:bg-orange-500/[0.02] hover:border-orange-500/30 transition-all cursor-default">
+                            <span className="text-[9px] text-orange-400 uppercase tracking-widest font-black">{item.category}</span>
+                            <span className="text-xs font-bold text-gray-300 flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 opacity-50" />
+                              {item.tech}
+                            </span>
+                          </div>
+                        ) : (
+                          <span key={idx} className="px-3.5 py-2 bg-white/[0.02] border border-white/[0.06] rounded-xl text-xs font-bold text-gray-300 hover:border-orange-500/30 hover:bg-orange-500/[0.04] hover:text-orange-300 transition-all cursor-default flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 opacity-80" />
+                            {item.tech}
+                          </span>
+                        )
+                      ));
+                    })()}
                   </div>
                 </div>
 
@@ -523,7 +605,7 @@ export default function ExploreProjectsPage() {
                     </h4>
                     {selectedProject.ratings && selectedProject.ratings.length > 0 && (
                       <div className="flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-xl text-xs font-black text-orange-400 shadow-[0_0_15px_rgba(255,138,0,0.1)]">
-                        <Star size={12} fill="currentColor" className="text-orange-400" /> 
+                        <Star size={12} fill="currentColor" className="text-orange-400" />
                         <span>{getAverageRating(selectedProject.ratings)} / 5.0</span>
                         <span className="text-orange-400/50">({selectedProject.ratings.length})</span>
                       </div>
@@ -574,7 +656,7 @@ export default function ExploreProjectsPage() {
                   </div>
 
                   {/* Rating Input Gating */}
-                  
+
                   {/* Option A: Signed In */}
                   {user?.id && (
                     <form onSubmit={handleRateSubmit} className="border-t border-white/[0.05] pt-5 space-y-4">

@@ -19,6 +19,7 @@ import { progressService } from '../../services/progress.service';
 
 export default function CodeyxDashboard() {
   const [theme, setTheme] = useState('dark');
+  const [comingSoonTitle, setComingSoonTitle] = useState('');
   const [showMockModal, setShowMockModal] = useState(false);
   const [showExtensionModal, setShowExtensionModal] = useState(false);
   const { user, isLoaded } = useUser();
@@ -380,7 +381,7 @@ export default function CodeyxDashboard() {
                   {[
                     { icon: Layers, title: 'Explore Sheets', desc: '450+ curated sheets', color: 'text-blue-400', link: '/explore-sheets' },
                     { icon: RotateCcw, title: 'Sync Platforms', desc: 'LeetCode, GFG & more', color: 'text-orange-400', action: 'sync' },
-                    { icon: BookOpen, title: 'My Notes', desc: 'Your personal notes', color: 'text-pink-400', link: '/notes' },
+                    { icon: BookOpen, title: 'My Notes', desc: 'Your personal notes', color: 'text-pink-400', action: 'coming_soon' },
                     { icon: FolderGit2, title: 'Projects', desc: 'Track and build projects', color: 'text-emerald-400', link: '/explore-projects' },
                     { icon: Bot, title: 'AI Mock Interview', desc: 'Practice & improve', color: 'text-cyan-400', action: 'coming_soon' },
                     { icon: Play, title: 'Resume Last Problem', desc: 'Binary Tree Inorder Traversal', color: 'text-green-400', link: '/explore-sheets' },
@@ -393,6 +394,7 @@ export default function CodeyxDashboard() {
                             platformService.syncPlatform('github', userId, user?.username || '');
                             platformService.syncPlatform('codechef', userId, user?.username || '');
                           } else if (actionItem.action === 'coming_soon') {
+                            setComingSoonTitle(actionItem.title);
                             setShowMockModal(true);
                           }
                         }}
@@ -610,7 +612,10 @@ export default function CodeyxDashboard() {
               </p>
 
               <button 
-                onClick={() => setShowExtensionModal(true)} 
+                onClick={() => {
+                  setComingSoonTitle('Codeyx Chrome Extension');
+                  setShowMockModal(true);
+                }} 
                 className="w-full bg-[#FF8A00] hover:bg-orange-500 text-white rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(255,138,0,0.3)] transition-all relative z-10"
               >
                 Install Extension <MonitorSmartphone size={12} />
@@ -681,7 +686,7 @@ export default function CodeyxDashboard() {
             <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-cyan-400">
               <Bot size={32} />
             </div>
-            <h3 className="text-xl font-extrabold text-white mb-2">AI Mock Interview</h3>
+            <h3 className="text-xl font-extrabold text-white mb-2">{comingSoonTitle || 'AI Mock Interview'}</h3>
             <p className="text-sm text-gray-400 mb-6 flex flex-col items-center gap-2">
               This feature is currently under development and will be available very soon. Stay tuned! 
               <Rocket size={16} className="text-cyan-400" />
