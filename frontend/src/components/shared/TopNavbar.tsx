@@ -213,11 +213,11 @@ export default function TopNavbar() {
     <>
       {/* Spacer to maintain document flow */}
       <div className="h-16 w-full shrink-0" />
-      <div className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ease-out flex justify-center w-full ${isScrolled ? 'pt-4 px-4' : 'pt-0 px-0'}`}>
+      <div className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-500 ease-out flex justify-center w-full ${isScrolled ? 'pt-4 px-4' : 'pt-0 px-0'}`}>
         <motion.nav 
           layout
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className={`flex items-center border ${border} backdrop-blur-xl bg-white/90 dark:bg-[#09090B]/90 ${isScrolled ? 'h-14 px-8 rounded-full shadow-2xl shadow-[#FF8A00]/10 border-gray-200 dark:border-white/10' : 'h-16 w-full pl-2 pr-4 rounded-none justify-between border-t-0 border-l-0 border-r-0'}`}
+          className={`relative z-[99999] flex items-center border ${border} backdrop-blur-xl bg-white/90 dark:bg-[#09090B]/90 ${isScrolled ? 'h-14 px-8 rounded-full shadow-2xl shadow-[#FF8A00]/10 border-gray-200 dark:border-white/10' : 'h-16 w-full pl-2 pr-4 rounded-none justify-between border-t-0 border-l-0 border-r-0'}`}
         >
           {/* Left: Branding & Search */}
           <motion.div 
@@ -455,7 +455,7 @@ export default function TopNavbar() {
           <motion.div 
             layout 
             transition={{ duration: 0.5, ease: "easeOut" }} 
-            className={`flex-1 flex items-center justify-end gap-4 whitespace-nowrap overflow-hidden ${isScrolled ? 'hidden opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}`}
+            className={`flex-1 flex items-center justify-end gap-4 whitespace-nowrap overflow-visible relative z-[99999] ${isScrolled ? 'hidden opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}`}
           >
 
             <div className="flex items-center gap-2">
@@ -482,7 +482,7 @@ export default function TopNavbar() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute right-0 top-[120%] w-80 bg-[#121214]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100]"
+                        className="absolute right-0 top-[120%] w-80 bg-white dark:bg-[#121214] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[999999]"
                       >
                         <div className="flex items-center justify-between p-4 border-b border-white/5">
                           <h3 className="text-sm font-black text-white">Notifications</h3>
@@ -509,11 +509,6 @@ export default function TopNavbar() {
                               </div>
                             </div>
                           ))}
-                        </div>
-                        <div className="p-3 border-t border-white/5 flex justify-center">
-                          <Link href="/dashboard/notifications" className="text-[10px] text-gray-400 hover:text-white font-bold transition-colors">
-                            View all notifications →
-                          </Link>
                         </div>
                       </motion.div>
                     )}
