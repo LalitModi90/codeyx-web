@@ -27,9 +27,7 @@ const wipeUserData = async () => {
       'followers',
       'notifications',
       'customsheets',
-      'customsheetproblems',
-      'universities',
-      'suggestions'
+      'customsheetproblems'
     ];
 
     console.log('🧹 Clearing user data...');
