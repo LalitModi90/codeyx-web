@@ -38,6 +38,9 @@ import { setupWorkers } from './queues/sync.worker';
 import { setupCleanupWorker } from './queues/cleanup.worker';
 
 const app = express();
+// Trust the proxy (Render/Vercel) to get the real client IP for rate limiting
+app.set('trust proxy', 1);
+
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 5005;
 
@@ -65,10 +68,10 @@ if (process.env.NODE_ENV === 'production') {
 // because Svix requires the raw buffer to verify the signature.
 app.use('/api/webhooks', webhookRoutes);
 
-// Rate limiting configuration (100 requests per 15 minutes per IP)
+// Rate limiting configuration (500 requests per 15 minutes per IP)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests from this IP, please try again after 15 minutes' }
