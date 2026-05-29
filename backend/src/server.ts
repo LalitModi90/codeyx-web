@@ -56,10 +56,14 @@ connectDB();
 
 // Initialize UPSTASH/Mongo Cron Background Sync
 if (process.env.NODE_ENV === 'production') {
-  console.log('🚀 Starting background workers & cron jobs (Production Mode)');
+  console.log('🚀 Starting background cron jobs (Production Mode)');
   startCronJobs();
-  setupWorkers();
-  setupCleanupWorker();
+  
+  // NOTE: BullMQ workers (setupWorkers, setupCleanupWorker) are disabled here 
+  // because they require a raw Redis TCP connection (ioredis). 
+  // Upstash REST API does not support BullMQ.
+  // setupWorkers();
+  // setupCleanupWorker();
 } else {
   console.log('⏸️ Background workers disabled (Local Mode)');
 }
