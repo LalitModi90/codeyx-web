@@ -9,11 +9,12 @@ export default function UsernameSetupModal() {
   const { profile, completeUsernameSetup } = useOnboarding();
   const { isLoaded, isSignedIn, user } = useUser();
   
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState(profile.firstName || '');
+  const [lastName, setLastName] = useState(profile.lastName || '');
+  const [username, setUsername] = useState(profile.username || '');
   
   const [isChecking, setIsChecking] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -25,10 +26,13 @@ export default function UsernameSetupModal() {
       if (!lastName && user.lastName) setLastName(user.lastName);
       
       if (!username) {
-        const initialUsername = user.username || 
-                                user.primaryEmailAddress?.emailAddress?.split('@')[0] || 
-                                '';
-        setUsername(initialUsername.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+        const randomDigits = Math.floor(Math.random() * 900000) + 100000;
+        let baseName = user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'user';
+        // Base name only letters, numbers, underscores
+        baseName = baseName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+        
+        // Initial name is base + random digits to ensure uniqueness by default
+        setUsername(`${baseName}_${randomDigits}`);
       }
     }
   }, [isLoaded, isSignedIn, user]);
@@ -57,7 +61,7 @@ export default function UsernameSetupModal() {
 
     const delayDebounce = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/check-username?username=${encodeURIComponent(username)}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/profile/check-username?username=${encodeURIComponent(username)}`);
         const data = await res.json();
         setIsChecking(false);
         if (data.available) {
@@ -77,10 +81,23 @@ export default function UsernameSetupModal() {
     return () => clearTimeout(delayDebounce);
   }, [username]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName || !lastName || !username || !isAvailable) return;
-    completeUsernameSetup(username, firstName, lastName);
+    if (!firstName || !lastName || !username || !isAvailable || isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/profile/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, username, name: `${firstName} ${lastName}`.trim() })
+      });
+    } catch (err) {
+      console.error('Failed to reserve username in DB:', err);
+    } finally {
+      setIsSaving(false);
+      completeUsernameSetup(username, firstName, lastName);
+    }
   };
 
   // If Step 1 is already complete, do not show the modal
@@ -233,15 +250,22 @@ export default function UsernameSetupModal() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={!firstName || !lastName || !username || !isAvailable || isChecking}
-            className={`w-full relative overflow-hidden group rounded-xl py-3.5 px-6 font-semibold flex items-center justify-center gap-1.5 shadow-lg shadow-orange-500/10 border border-white/10 transition-all duration-300 ${
-              firstName && lastName && username && isAvailable && !isChecking
-                ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white cursor-pointer hover:shadow-orange-500/20 active:scale-[0.98]'
-                : 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'
+            disabled={!firstName || !lastName || !username || !isAvailable || isChecking || isSaving}
+            className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+              !firstName || !lastName || !username || !isAvailable || isChecking || isSaving
+                ? 'bg-white/5 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.5)] hover:scale-[1.02]'
             }`}
           >
-            Get Started
-            <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+            {isSaving ? (
+              <>
+                <Loader2 size={18} className="animate-spin" /> Saving...
+              </>
+            ) : (
+              <>
+                Continue <ChevronRight size={18} />
+              </>
+            )}
           </button>
         </form>
       </motion.div>

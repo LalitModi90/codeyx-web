@@ -149,6 +149,8 @@ export default function OnboardingPage() {
         if (user?.id) {
           await profileService.updateProfile({
             userId: user.id,
+            username: profile.username,
+            name: `${profile.firstName} ${profile.lastName}`.trim(),
             college: collegeInput,
             degree,
             branch,
@@ -164,12 +166,7 @@ export default function OnboardingPage() {
             },
           });
         }
-      } catch (err) {
-        console.error('Failed to save onboarding data to backend:', err);
-        // Non-blocking — still complete onboarding locally
-        setSubmitError('Profile saved locally. Backend sync will retry on next load.');
-      } finally {
-        setSubmitting(false);
+        
         completeFullProfile({
           degree,
           branch,
@@ -179,6 +176,12 @@ export default function OnboardingPage() {
           jobRole,
           skills: selectedSkills,
         });
+      } catch (err: any) {
+        console.error('Failed to save onboarding data to backend:', err);
+        const msg = err?.message || err?.data?.message || err?.response?.data?.message || (typeof err === 'string' ? err : JSON.stringify(err));
+        setSubmitError(msg);
+      } finally {
+        setSubmitting(false);
       }
     }
   };

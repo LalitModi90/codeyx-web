@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import TopNavbar from '@/components/shared/TopNavbar';
 import { Settings, Link2, ExternalLink, CheckCircle2, RefreshCw, ShieldAlert, Trash2, Lock, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { platformService } from '@/services/platform.service';
 
 const AVAILABLE_PLATFORMS = [
@@ -18,6 +18,7 @@ const AVAILABLE_PLATFORMS = [
 
 export default function IntegrationsSettings() {
   const { user, isLoaded } = useUser();
+  const { openUserProfile } = useClerk();
   const [activeTab, setActiveTab] = useState<'integrations' | 'privacy'>('integrations');
   const [connectedPlatforms, setConnectedPlatforms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,9 +30,7 @@ export default function IntegrationsSettings() {
   const [disconnectModal, setDisconnectModal] = useState<string | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
-  // Deletion state
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+
 
   useEffect(() => {
     if (user?.id) {
@@ -134,22 +133,7 @@ export default function IntegrationsSettings() {
     }
   };
 
-  // Perform full account and profile deletion
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    setIsDeleting(true);
-    setError("");
-    try {
-      console.log("[Delete Account] Initiating Clerk deletion...");
-      await user.delete();
-      console.log("[Delete Account] Clerk user deleted successfully.");
-      window.location.href = "/login"; // Redirect to login
-    } catch (err: any) {
-      console.error("Clerk deletion failed:", err);
-      setError(err.message || "Failed to permanently delete account. Please try again later.");
-      setIsDeleting(false);
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-[#09090B] font-sans text-white pb-20 relative">
@@ -292,16 +276,24 @@ export default function IntegrationsSettings() {
                 <div className="h-px bg-rose-500/10 w-full" />
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                    <h4 className="text-sm font-bold text-white">Permanently Delete Account</h4>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed max-w-lg">
-                      Deleting your account will erase your developer portfolio, sync connections, and all Codeyx historical performance rankings. This request processes immediately.
+                    <h4 className="text-sm font-bold text-white">Manage Account Security</h4>
+                    <p className="text-xs text-gray-400 leading-relaxed max-w-lg mb-3">
+                      This action will permanently remove your <span className="text-rose-400 font-bold">projects, repositories, reviews, analytics, portfolio, and coding platform data</span>. This action cannot be undone.
                     </p>
+                    <p className="text-xs text-gray-500 mt-2 leading-relaxed max-w-lg mb-2">
+                      To permanently delete your account, follow these steps:
+                    </p>
+                    <ol className="text-xs text-gray-400 list-decimal pl-4 space-y-1 font-semibold">
+                      <li>Click the <span className="text-white">Security Settings</span> button below.</li>
+                      <li>In the popup window, go to the <span className="text-white">Security</span> tab on the left.</li>
+                      <li>Scroll down and click <span className="text-rose-400">Delete account</span>.</li>
+                    </ol>
                   </div>
                   <button 
-                    onClick={() => { setShowDeleteModal(true); setError(""); }}
+                    onClick={() => openUserProfile()}
                     className="px-5 py-3 shrink-0 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.1)]"
                   >
-                    <Trash2 size={14} /> Delete Account
+                    <Lock size={14} /> Security Settings
                   </button>
                 </div>
               </div>
@@ -423,74 +415,6 @@ export default function IntegrationsSettings() {
         </div>
       )}
 
-      {/* UX Rules Account Deletion Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md bg-[#111216] border border-rose-500/20 rounded-2xl p-8 shadow-2xl relative"
-          >
-            <button 
-              onClick={() => !isDeleting && setShowDeleteModal(false)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors disabled:opacity-50"
-              disabled={isDeleting}
-            >
-              ✕
-            </button>
-            
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-rose-500/10 border border-rose-500/35 flex items-center justify-center text-rose-500 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
-                <ShieldAlert size={20} />
-              </div>
-              <h3 className="text-2xl font-black text-white">Delete Account?</h3>
-            </div>
-
-            <p className="text-xs font-semibold text-gray-400 mb-4 leading-relaxed">
-              This action will permanently remove:
-            </p>
-
-            <ul className="text-xs text-gray-300 space-y-2.5 mb-6 pl-4 list-disc marker:text-rose-500 font-bold">
-              <li>projects</li>
-              <li>repositories</li>
-              <li>reviews</li>
-              <li>analytics</li>
-              <li>portfolio</li>
-              <li>coding platform data</li>
-            </ul>
-
-            <div className="p-3.5 bg-rose-500/5 border border-rose-500/10 rounded-xl mb-6 flex items-center gap-2.5">
-              <EyeOff size={16} className="text-rose-400" />
-              <p className="text-[10px] font-black text-rose-400 uppercase tracking-wider">
-                This action cannot be undone.
-              </p>
-            </div>
-
-            {error && (
-              <div className="text-xs font-semibold text-red-400 bg-red-400/10 border border-red-400/20 px-3 py-2 rounded-lg mb-4">
-                {error}
-              </div>
-            )}
-
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="flex-1 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-                className="flex-1 py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black uppercase tracking-wider shadow-[0_4px_20px_rgba(220,38,38,0.3)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isDeleting ? <RefreshCw size={14} className="animate-spin" /> : 'Permanently Delete'}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }

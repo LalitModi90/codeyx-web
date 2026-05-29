@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useUser, useClerk, SignInButton, SignedOut, SignedIn, UserButton } from '@clerk/nextjs';
-import { Search, Sun, Moon, Bell, ChevronDown, Briefcase, RefreshCw, Activity, ExternalLink, LogOut, User, Settings, Lock, Flame, Code2, Trophy, Clock, CalendarDays } from 'lucide-react';
+import { Search, Sun, Moon, Bell, ChevronDown, Briefcase, RefreshCw, Activity, ExternalLink, LogOut, User, Settings, Lock, Flame, Code2, Trophy, Clock, CalendarDays, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { platformService } from '../../services/platform.service';
@@ -33,6 +33,7 @@ export default function TopNavbar() {
   const profileMenuRef = React.useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(true);
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const notifRef = React.useRef<HTMLDivElement>(null);
 
@@ -185,6 +186,17 @@ export default function TopNavbar() {
     }
   }, []);
 
+  React.useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
   const userName = isLoaded && user?.firstName ? user.firstName : 'Lalit';
   const userImage = isLoaded && user?.imageUrl ? user.imageUrl : null;
   const defaultUsername = isLoaded && user ? (user.username || user.primaryEmailAddress?.emailAddress?.split('@')[0] || user.firstName?.toLowerCase() || 'lalitmodi') : 'lalitmodi';
@@ -213,23 +225,23 @@ export default function TopNavbar() {
     <>
       {/* Spacer to maintain document flow */}
       <div className="h-16 w-full shrink-0" />
-      <div className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-500 ease-out flex justify-center w-full ${isScrolled ? 'pt-4 px-4' : 'pt-0 px-0'}`}>
+      <div className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-500 ease-out flex justify-center w-full ${isScrolled ? 'pt-2 px-2 md:pt-4 md:px-4' : 'pt-0 px-0'}`}>
         <motion.nav 
           layout
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className={`relative z-[99999] flex items-center border ${border} backdrop-blur-xl bg-white/90 dark:bg-[#09090B]/90 ${isScrolled ? 'h-14 px-8 rounded-full shadow-2xl shadow-[#FF8A00]/10 border-gray-200 dark:border-white/10' : 'h-16 w-full pl-2 pr-4 rounded-none justify-between border-t-0 border-l-0 border-r-0'}`}
+          className={`relative z-[99999] flex items-center border ${border} backdrop-blur-xl bg-white/90 dark:bg-[#09090B]/90 ${isScrolled ? 'h-14 px-4 xl:px-8 rounded-full shadow-2xl shadow-[#FF8A00]/10 border-gray-200 dark:border-white/10 w-full md:w-auto md:justify-center justify-between' : 'h-16 w-full pl-2 pr-4 rounded-none justify-between border-t-0 border-l-0 border-r-0'}`}
         >
           {/* Left: Branding & Search */}
           <motion.div 
             layout
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className={`flex-1 flex items-center justify-start gap-0 overflow-hidden whitespace-nowrap ${isScrolled ? 'hidden opacity-0' : 'opacity-100'}`}
+            className={`flex-shrink-0 flex items-center justify-start gap-0 overflow-hidden whitespace-nowrap ${(isScrolled && !isMobileMenuOpen) ? 'xl:hidden opacity-100' : 'opacity-100'} ${isScrolled ? 'md:hidden' : ''}`}
           >
-            <Link href="/" className="flex items-center group pr-2 select-none ml-6">
+            <Link href="/" className="flex items-center group pr-2 select-none ml-2 md:ml-6">
               <img 
                 src={isDarkMode ? "/assets/logo-dark-them.png" : "/assets/logo-light-Them.png"} 
                 alt="Codeyx Logo" 
-                className="h-[75px] w-auto object-contain transition-transform group-hover:scale-105 scale-110 origin-left" 
+                className="h-[60px] md:h-[75px] w-auto object-contain transition-transform group-hover:scale-105 scale-110 origin-left" 
               />
             </Link>
           </motion.div>
@@ -455,7 +467,7 @@ export default function TopNavbar() {
           <motion.div 
             layout 
             transition={{ duration: 0.5, ease: "easeOut" }} 
-            className={`flex-1 flex items-center justify-end gap-4 whitespace-nowrap overflow-visible relative z-[99999] ${isScrolled ? 'hidden opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}`}
+            className={`flex-shrink-0 flex items-center justify-end gap-2 md:gap-4 whitespace-nowrap overflow-visible relative z-[99999] ${(isScrolled && !isMobileMenuOpen) ? 'xl:hidden opacity-100 pointer-events-auto' : 'opacity-100 pointer-events-auto'} ${isScrolled ? 'md:hidden' : ''}`}
           >
 
             <div className="flex items-center gap-2">
@@ -544,9 +556,71 @@ export default function TopNavbar() {
                 </Link>
               </div>
             </SignedOut>
+
+            {/* Mobile Menu Toggle Button */}
+            <div className="xl:hidden flex items-center">
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+                className={`p-2 rounded-xl border ${border} text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all`}
+              >
+                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
           </motion.div>
         </motion.nav>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9998] bg-white/95 dark:bg-[#09090B]/95 backdrop-blur-3xl pt-24 px-6 pb-6 overflow-y-auto"
+          >
+            <div className="flex flex-col gap-4">
+              {(pathname === '/'
+                ? [
+                  { label: 'Sheets', href: '/explore-sheets' },
+                  { label: 'Projects', href: '/explore-projects' },
+                  { label: 'Patterns', href: '/patterns' },
+                  { label: 'Contests', href: '/contests' },
+                  { label: 'Leaderboard', href: '/leaderboard' },
+                  { label: 'Profile', href: '/profile' },
+                ]
+                : [
+                  { label: 'Home', href: '/dashboard' },
+                  { label: 'Analytics', href: '/analytics' },
+                  { label: 'Sheets', href: '/explore-sheets' },
+                  { label: 'Patterns', href: '/patterns' },
+                  { label: 'Workspace', href: '/workspace' },
+                  { label: 'Platforms', href: '/dashboard/platforms/leetcode' },
+                  { label: 'Projects', href: '/explore-projects' },
+                  { label: 'Contests', href: '/contests' },
+                  { label: 'Leaderboard', href: '/leaderboard' },
+                  { label: 'Profile', href: '/profile' },
+                ]
+              ).map((item, i) => {
+                const isActive = pathname === item.href || (pathname.startsWith('/sheets') && item.label === 'Workspace') || (pathname === '/dashboard' && item.label === 'Home') || (pathname.startsWith('/dashboard/platforms') && item.label === 'Platforms') || (pathname.startsWith('/projects') && item.label === 'Projects') || (pathname.startsWith('/contests') && item.label === 'Contests') || (pathname.startsWith('/leaderboard') && item.label === 'Leaderboard') || (pathname.startsWith('/patterns') && item.label === 'Patterns') || (pathname.startsWith('/profile') && item.label === 'Profile');
+
+                return (
+                  <Link 
+                    key={i}
+                    href={item.href} 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`text-lg font-bold p-4 rounded-2xl border ${isActive ? 'bg-[#FF8A00]/10 border-[#FF8A00]/20 text-[#FF8A00]' : 'border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/[0.02] text-gray-700 dark:text-gray-300'} transition-all flex items-center justify-between`}
+                  >
+                    {item.label}
+                    {isActive && <div className="w-2 h-2 rounded-full bg-[#FF8A00]" />}
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

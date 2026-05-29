@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import {
   MapPin, Link2, Github, Twitter, Linkedin, Briefcase, Edit3,
   Code2, Trophy, FolderGit2, Star, Target, Shield, Flame,
-  ChevronDown, ExternalLink, X, Check, Camera, Instagram, Mail, Copy, Search, Sparkles, GitFork, Layers, MessageSquare
+  ChevronDown, ExternalLink, X, Check, CheckCircle2, Camera, Instagram, Mail, Copy, Search, Sparkles, GitFork, Layers, MessageSquare, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -38,7 +38,10 @@ export default function PublicProfilePage() {
   const [isViewingProjects, setIsViewingProjects] = useState(false);
   const [isManagingProjects, setIsManagingProjects] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
-  
+  const [usernameError, setUsernameError] = useState('');
+  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+
   // Ratings & project detail modal states
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [userRating, setUserRating] = useState<number>(5);
@@ -67,10 +70,10 @@ export default function PublicProfilePage() {
         username: user?.username || user?.fullName || 'Anonymous',
         userAvatar: user?.imageUrl || ''
       });
-      
+
       const updatedProj = res.data;
       await loadDynamicData();
-      
+
       // Update selected project state
       setSelectedProject((prev: any) => ({
         ...prev,
@@ -147,7 +150,7 @@ export default function PublicProfilePage() {
 
   React.useEffect(() => {
     if (!profile.username || isOwnProfile) return;
-    
+
     try {
       const savedFollowing = localStorage.getItem('codeyx_following_list');
       let currentFollowing = savedFollowing ? JSON.parse(savedFollowing) : [];
@@ -178,6 +181,15 @@ export default function PublicProfilePage() {
     if (socket && user?.id) {
       socket.on('profile.updated', (newProfile) => {
         setProfile((prev) => ({ ...prev, ...newProfile }));
+        if (newProfile.skills && Array.isArray(newProfile.skills)) {
+          const colors = ['orange', 'blue', 'emerald', 'purple', 'rose', 'cyan'];
+          const mappedSkills = newProfile.skills.map((s: string, i: number) => ({
+            name: s,
+            level: 'Intermediate',
+            color: colors[i % colors.length]
+          }));
+          setSkills(mappedSkills);
+        }
       });
     }
     return () => {
@@ -188,10 +200,10 @@ export default function PublicProfilePage() {
   React.useEffect(() => {
     if (isOwnProfile && isLoaded && user) {
       setProfile(prev => {
-        const isMockUsername = prev.username === 'aryan_singh';
+        const isMockUsername = !prev.username || prev.username === 'aryan_singh';
         const defaultUsername = user.primaryEmailAddress?.emailAddress?.split('@')[0] || user.firstName?.toLowerCase() || prev.username;
         const savedUsername = localStorage.getItem('codeyx_username');
-        const finalUsername = user.username || savedUsername || (isMockUsername ? defaultUsername : prev.username);
+        const finalUsername = isMockUsername ? (savedUsername || user.username || defaultUsername) : prev.username;
 
         return {
           ...prev,
@@ -339,14 +351,47 @@ export default function PublicProfilePage() {
       const profileRes = await profileService.getProfile(targetUserId);
       const pData = profileRes.data || {};
 
+      setProfile(prev => ({
+        ...prev,
+        clerkId: targetUserId,
+        name: pData.name || prev.name || 'Developer',
+        username: pData.username || prev.username || '',
+        location: pData.location || (isOwnProfile ? 'Add Location' : '—'),
+        github: pData.socialLinks?.github || (isOwnProfile ? 'Add GitHub' : '—'),
+        bio: pData.bio || (isOwnProfile ? 'Add a short bio or tagline...' : 'This user hasn\'t added a bio yet.'),
+        about: pData.about || (isOwnProfile ? 'Tell others about yourself...' : 'No details provided yet.'),
+        college: pData.college || (isOwnProfile ? 'Add College' : '—'),
+        degree: pData.degree || (isOwnProfile ? 'Add Degree' : '—'),
+        branch: pData.branch || (isOwnProfile ? 'Add Branch' : '—'),
+        jobRole: pData.jobRole || (isOwnProfile ? 'Add Job Role' : '—'),
+        year: pData.year || (isOwnProfile ? 'Add Year' : '—'),
+        email: pData.email || (isOwnProfile ? 'Add Email' : '—'),
+        portfolio: pData.portfolio || (isOwnProfile ? 'Add Portfolio' : '—'),
+        linkedin: pData.socialLinks?.linkedin || (isOwnProfile ? 'Add LinkedIn' : '—'),
+        twitter: pData.socialLinks?.twitter || (isOwnProfile ? 'Add Twitter' : '—'),
+        instagram: pData.socialLinks?.instagram || (isOwnProfile ? 'Add Instagram' : '—')
+      }));
+
+      if (pData.skills && Array.isArray(pData.skills)) {
+        const colors = ['orange', 'blue', 'emerald', 'purple', 'rose', 'cyan'];
+        const mappedSkills = pData.skills.map((s: string, i: number) => ({
+          name: s,
+          level: 'Intermediate',
+          color: colors[i % colors.length]
+        }));
+        setSkills(mappedSkills);
+      } else {
+        setSkills([]);
+      }
+
       // 3. Fetch real projects
       let projectsArray: any[] = [];
       try {
         const projectsRes = await profileService.getProjects(targetUserId);
         const rawProjects = projectsRes.data || [];
         if (Array.isArray(rawProjects)) {
-          const filteredProjects = isOwnProfile 
-            ? rawProjects 
+          const filteredProjects = isOwnProfile
+            ? rawProjects
             : rawProjects.filter((p: any) => p.visibility === 'public');
 
           projectsArray = filteredProjects.map((p: any) => ({
@@ -370,25 +415,11 @@ export default function PublicProfilePage() {
       if (leaderData.success && leaderData.data) {
         const uData = leaderData.data;
 
-        setProfile({
-          clerkId: targetUserId,
-          name: uData.user || 'Aryan Singh',
-          username: uData.username || 'aryan_singh',
-          location: pData.location || (isOwnProfile ? 'Add Location' : '—'),
-          github: pData.socialLinks?.github || (isOwnProfile ? 'Add GitHub' : '—'),
-          bio: pData.bio || (isOwnProfile ? 'Add a short bio or tagline...' : 'This user hasn\'t added a bio yet.'),
-          about: pData.about || (isOwnProfile ? 'Tell others about yourself...' : 'No details provided yet.'),
-          college: pData.college || (isOwnProfile ? 'Add College' : '—'),
-          degree: pData.degree || (isOwnProfile ? 'Add Degree' : '—'),
-          branch: pData.branch || (isOwnProfile ? 'Add Branch' : '—'),
-          jobRole: pData.jobRole || (isOwnProfile ? 'Add Job Role' : '—'),
-          year: pData.year || (isOwnProfile ? 'Add Year' : '—'),
-          email: pData.email || (isOwnProfile ? 'Add Email' : '—'),
-          portfolio: pData.portfolio || (isOwnProfile ? 'Add Portfolio' : '—'),
-          linkedin: pData.socialLinks?.linkedin || (isOwnProfile ? 'Add LinkedIn' : '—'),
-          twitter: pData.socialLinks?.twitter || (isOwnProfile ? 'Add Twitter' : '—'),
-          instagram: pData.socialLinks?.instagram || (isOwnProfile ? 'Add Instagram' : '—')
-        });
+        setProfile(prev => ({
+          ...prev,
+          name: uData.user || prev.name,
+          username: uData.username || prev.username,
+        }));
 
         setOverallStats({
           problems: uData.problems || 0,
@@ -554,21 +585,6 @@ export default function PublicProfilePage() {
     const formData = new FormData(e.target as HTMLFormElement);
     const newUsername = formData.get('username') as string;
 
-    if (newUsername !== profile.username) {
-      // Mock validation for uniqueness
-      const allMockUsers = [...mockFollowersList, ...mockFollowingList];
-      const isTaken = allMockUsers.some(u => u.username.toLowerCase() === newUsername.toLowerCase());
-
-      if (isTaken) {
-        alert(`The username "${newUsername}" is already taken! Please choose a unique username.`);
-        return; // Prevent saving
-      }
-
-      setLastUsernameChange(new Date());
-      localStorage.setItem('codeyx_username', newUsername);
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: newUsername }));
-    }
-
     const profilePayload = {
       userId: user?.id || '', // Link Clerk Authentication ID to MongoDB User Document
       name: profile.name,
@@ -587,18 +603,38 @@ export default function PublicProfilePage() {
       linkedin: formData.get('linkedin') as string,
       twitter: formData.get('twitter') as string,
       instagram: formData.get('instagram') as string,
+      socialLinks: {
+        github: formData.get('github') as string,
+        linkedin: formData.get('linkedin') as string,
+        twitter: formData.get('twitter') as string,
+        instagram: formData.get('instagram') as string,
+      }
     };
 
+    if (usernameError || isCheckingUsername) return;
+
     try {
+      setUsernameError('');
       // Send payload to the MERN backend to update MongoDB
       await profileService.updateProfile(profilePayload);
+
+      if (newUsername !== profile.username) {
+        setLastUsernameChange(new Date());
+        localStorage.setItem('codeyx_username', newUsername);
+        window.dispatchEvent(new CustomEvent('profileUpdated', { detail: newUsername }));
+      }
 
       // We also update state optimistically for immediate UI feedback
       setProfile((prev: any) => ({ ...prev, ...profilePayload }));
       setIsEditing(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update profile", error);
-      alert("Failed to save profile. Please try again.");
+      const msg = error?.message || error?.data?.message || error?.response?.data?.message || (typeof error === 'string' ? error : "Failed to save profile");
+      if (msg.toLowerCase().includes('username')) {
+        setUsernameError(msg);
+      } else {
+        alert("Error details: " + JSON.stringify(error));
+      }
     }
   };
 
@@ -726,7 +762,7 @@ export default function PublicProfilePage() {
                 { icon: Instagram, url: profile.instagram, value: profile.instagram, label: 'Instagram' },
                 { icon: Briefcase, url: profile.portfolio, value: profile.portfolio, label: 'Portfolio' }
               ]
-                .filter(s => s.value && s.value.trim() !== '' && !s.value.startsWith('Add '))
+                .filter(s => s.value && s.value.trim() !== '' && !s.value.startsWith('Add ') && s.value !== '—')
                 .map((social, i) => (
                   <a key={i} href={social.url?.startsWith('http') || social.url?.startsWith('mailto') ? social.url : `https://${social.url}`} target="_blank" rel="noopener noreferrer" className="group relative w-9 h-9 rounded-full bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-black dark:text-white hover:bg-white/10 transition-all">
                     <social.icon size={16} />
@@ -753,8 +789,8 @@ export default function PublicProfilePage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`pb-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors relative top-[1px] ${activeTab === tab
-                  ? 'border-orange-500 text-black dark:text-white'
-                  : 'border-transparent text-gray-500 hover:text-black dark:hover:text-white'
+                ? 'border-orange-500 text-black dark:text-white'
+                : 'border-transparent text-gray-500 hover:text-black dark:hover:text-white'
                 }`}
             >
               {tab}
@@ -891,7 +927,7 @@ export default function PublicProfilePage() {
                   </div>
                 </div>
 
-{courses.length === 0 ? (
+                {courses.length === 0 ? (
                   <div className="text-sm text-gray-500 italic py-4">No courses added yet. {isOwnProfile && 'Click Manage to add courses!'}</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -951,7 +987,7 @@ export default function PublicProfilePage() {
                   <button onClick={() => setIsViewingProjects(true)} className="text-xs font-bold text-orange-500 hover:text-orange-400">View All</button>
                 </div>
               </div>
-{projects.length === 0 ? (
+              {projects.length === 0 ? (
                 <div className="text-sm text-gray-500 italic py-4">
                   No projects added yet. {isOwnProfile && 'Click Manage to add your projects!'}
                 </div>
@@ -1160,7 +1196,7 @@ export default function PublicProfilePage() {
             {/* Recent Activity List */}
             <div className="bg-gray-50 dark:bg-[#0A0A0C] border border-gray-200 dark:border-white/5 rounded-3xl p-6">
               <h2 className="text-lg font-bold text-black dark:text-white mb-6">Recent Activity</h2>
-<div className="text-sm text-gray-500 italic py-4 text-center">
+              <div className="text-sm text-gray-500 italic py-4 text-center">
                 No recent activity to show. Start solving problems on connected platforms!
               </div>
             </div>
@@ -1355,16 +1391,104 @@ export default function PublicProfilePage() {
                         placeholder="Your username"
                         required
                         readOnly={!!lastUsernameChange && Math.floor((new Date().getTime() - lastUsernameChange.getTime()) / (1000 * 3600 * 24)) < 90}
-                        className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors ${!!lastUsernameChange && Math.floor((new Date().getTime() - lastUsernameChange.getTime()) / (1000 * 3600 * 24)) < 90 ? 'bg-gray-100 dark:bg-[#111115] border-gray-200 dark:border-white/5 text-gray-500 cursor-not-allowed' : 'bg-white dark:bg-[#1A1A1D] border-gray-200 dark:border-white/10 text-black dark:text-white focus:border-orange-500/50'}`}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setUsernameError('');
+                          setUsernameSuggestions([]);
+                          if (val === profile.username) {
+                            setIsCheckingUsername(false);
+                            return;
+                          }
+                          const validFormat = /^[a-zA-Z0-9_]+$/.test(val);
+                          if (!validFormat && val.length > 0) {
+                            setUsernameError('Letters, numbers, and underscores only.');
+                            return;
+                          }
+                          if (val.length < 4) {
+                            if (val.length > 0) setUsernameError('Must be at least 4 characters.');
+                            return;
+                          }
+
+                          setIsCheckingUsername(true);
+                          clearTimeout((window as any).unameTimer);
+                          (window as any).unameTimer = setTimeout(async () => {
+                            try {
+                              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/profile/check-username?username=${encodeURIComponent(val)}`);
+                              const data = await res.json();
+                              if (!data.available) {
+                                setUsernameError(data.error || 'Username is already taken');
+                                setUsernameSuggestions(data.suggestions || []);
+                              } else {
+                                setUsernameSuggestions([]);
+                              }
+                            } catch (e) { }
+                            setIsCheckingUsername(false);
+                          }, 600);
+                        }}
+                        className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors ${!!lastUsernameChange && Math.floor((new Date().getTime() - lastUsernameChange.getTime()) / (1000 * 3600 * 24)) < 90
+                            ? 'bg-gray-100 dark:bg-[#111115] border-gray-200 dark:border-white/5 text-gray-500 cursor-not-allowed'
+                            : usernameError
+                              ? 'bg-white dark:bg-[#1A1A1D] border-red-500/50 text-red-500 focus:border-red-500'
+                              : isCheckingUsername
+                                ? 'bg-white dark:bg-[#1A1A1D] border-orange-500/50 text-black dark:text-white focus:border-orange-500'
+                                : 'bg-white dark:bg-[#1A1A1D] border-gray-200 dark:border-white/10 text-black dark:text-white focus:border-orange-500/50'
+                          }`}
                       />
+                      {isCheckingUsername && (
+                        <p className="text-xs font-semibold text-orange-500 mt-0.5 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Checking availability...</p>
+                      )}
+                      {usernameError && !isCheckingUsername && (
+                        <div className="mt-1 space-y-1.5">
+                          <p className="text-xs font-semibold text-red-500">{usernameError}</p>
+                          {usernameSuggestions.length > 0 && (
+                            <div className="bg-white/5 dark:bg-[#0b0f19]/50 border border-gray-200 dark:border-white/5 p-2 rounded-xl">
+                              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1 ml-1">Suggestions:</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {usernameSuggestions.map((suggestion) => (
+                                  <button
+                                    key={suggestion}
+                                    type="button"
+                                    onClick={() => {
+                                      const input = document.getElementById('edit-username') as HTMLInputElement;
+                                      if (input) {
+                                        input.value = suggestion;
+                                        // Manually trigger onChange logic since setting value doesn't fire event
+                                        setUsernameError('');
+                                        setUsernameSuggestions([]);
+                                        setIsCheckingUsername(true);
+                                        clearTimeout((window as any).unameTimer);
+                                        (window as any).unameTimer = setTimeout(async () => {
+                                          try {
+                                            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/profile/check-username?username=${encodeURIComponent(suggestion)}`);
+                                            const data = await res.json();
+                                            if (!data.available) {
+                                              setUsernameError(data.error || 'Username is already taken');
+                                              setUsernameSuggestions(data.suggestions || []);
+                                            }
+                                          } catch (e) { }
+                                          setIsCheckingUsername(false);
+                                        }, 600);
+                                      }
+                                    }}
+                                    className="text-xs bg-orange-500/10 border border-orange-500/20 text-orange-500 hover:bg-orange-500/20 hover:border-orange-500/40 rounded-lg px-2.5 py-1 transition-all font-mono"
+                                  >
+                                    {suggestion}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!usernameError && !isCheckingUsername && typeof document !== 'undefined' && (document.getElementById('edit-username') as HTMLInputElement)?.value && (document.getElementById('edit-username') as HTMLInputElement)?.value !== profile.username && (
+                        <p className="text-xs font-semibold text-green-500 mt-0.5 flex items-center gap-1">
+                          <CheckCircle2 size={12} /> Username available
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-location" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Location</label>
                       <input id="edit-location" name="location" defaultValue={profile.location} placeholder="e.g. New Delhi, India" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="edit-github" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">GitHub</label>
-                      <input id="edit-github" name="github" defaultValue={profile.github} placeholder="github.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                   </div>
 
@@ -1414,16 +1538,20 @@ export default function PublicProfilePage() {
                       <input id="edit-portfolio" name="portfolio" defaultValue={profile.portfolio} placeholder="yourportfolio.dev" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
+                      <label htmlFor="edit-github" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">GitHub</label>
+                      <input id="edit-github" name="github" defaultValue={profile.socialLinks?.github || ''} placeholder="github.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-linkedin" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">LinkedIn</label>
-                      <input id="edit-linkedin" name="linkedin" defaultValue={profile.linkedin} placeholder="linkedin.com/in/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-linkedin" name="linkedin" defaultValue={profile.socialLinks?.linkedin || ''} placeholder="linkedin.com/in/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-twitter" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Twitter</label>
-                      <input id="edit-twitter" name="twitter" defaultValue={profile.twitter} placeholder="twitter.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-twitter" name="twitter" defaultValue={profile.socialLinks?.twitter || ''} placeholder="twitter.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-instagram" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Instagram</label>
-                      <input id="edit-instagram" name="instagram" defaultValue={profile.instagram} placeholder="instagram.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-instagram" name="instagram" defaultValue={profile.socialLinks?.instagram || ''} placeholder="instagram.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                   </div>
                 </form>
@@ -1433,8 +1561,8 @@ export default function PublicProfilePage() {
                 <button onClick={() => setIsEditing(false)} className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:text-white transition-colors">
                   Cancel
                 </button>
-                <button type="submit" form="edit-profile-form" className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-black dark:text-white text-sm font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all">
-                  <Check size={16} /> Save Changes
+                <button type="submit" form="edit-profile-form" disabled={!!usernameError || isCheckingUsername} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-black dark:text-white text-sm font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all ${usernameError || isCheckingUsername ? 'bg-orange-500/50 cursor-not-allowed opacity-50' : 'bg-orange-500 hover:bg-orange-400'}`}>
+                  {isCheckingUsername ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Save Changes
                 </button>
               </div>
             </motion.div>

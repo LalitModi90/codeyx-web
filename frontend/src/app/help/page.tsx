@@ -59,7 +59,7 @@ export default function HelpCenterPage() {
         },
         {
           keywords: ['delete account', 'remove account', 'close account'],
-          answer: "To delete your account, go to Settings -> Account -> Danger Zone, and click 'Delete Account'. This action is permanent and will wipe all your synced data."
+          answer: "To delete your account, go to Settings -> Privacy & Account, and click 'Security Settings'. In the popup window, go to the 'Security' tab and select 'Delete account'. This action is permanent and will completely wipe all your synced data."
         },
         {
           keywords: ['price', 'cost', 'free', 'pricing', 'premium'],
@@ -80,6 +80,74 @@ export default function HelpCenterPage() {
         {
           keywords: ['hello', 'hi', 'hey', 'greetings'],
           answer: "Hello there! I am the Codeyx AI assistant. I can help you with anything related to syncing platforms, understanding the leaderboard, managing your portfolio, or tracking sheets. What do you need help with?"
+        },
+        {
+          keywords: ['contest', 'upcoming', 'schedule', 'participate', 'competition'],
+          answer: "Codeyx tracks upcoming coding contests from major platforms like LeetCode and Codeforces. Visit the 'Contests' tab on your dashboard to view schedules, set reminders, and jump directly into the arena."
+        },
+        {
+          keywords: ['analytics', 'heatmap', 'statistics', 'graph', 'chart'],
+          answer: "Your Codeyx Dashboard features deep analytics, including a unified heatmap that aggregates your daily coding consistency across all linked platforms, along with detailed submission statistics."
+        },
+        {
+          keywords: ['university', 'college', 'campus', 'institute', 'school'],
+          answer: "You can showcase your university on your Profile! We use a smart approval system—if your college isn't listed, you can request to add it. Linking your college lets you compete on your exclusive Campus Leaderboard."
+        },
+        {
+          keywords: ['hackerrank', 'hacker rank', 'atcoder', 'at coder'],
+          answer: "Yes, we fully support HackerRank and AtCoder! Head over to Dashboard -> Integrations to link your profiles and sync your ratings and global ranks."
+        },
+        {
+          keywords: ['theme', 'dark mode', 'light mode', 'colors', 'ui'],
+          answer: "Codeyx is designed with a premium, glassmorphic Dark Mode by default for an elite developer experience. We use vibrant accents to make your portfolio truly stand out to recruiters."
+        },
+        {
+          keywords: ['skills', 'tech stack', 'languages', 'frameworks', 'manage skills'],
+          answer: "You can showcase your technical skills (like React, Node.js, C++, Python) on your portfolio! Go to your Profile page and click 'Manage' next to the Skills section. Any changes you make will update your public portfolio in real-time."
+        },
+        {
+          keywords: ['bug', 'support', 'contact', 'help', 'issue', 'report'],
+          answer: "Found a bug or have a suggestion? You can use the Feedback button floating on the bottom right of your screen to send a message directly to the development team, or keep chatting with me for instant answers!"
+        },
+        {
+          keywords: ['privacy', 'public', 'hide profile', 'visibility', 'share'],
+          answer: "Your Codeyx portfolio is designed to be shared with recruiters via a custom URL. However, you maintain full control over your data privacy and can manage platform visibility directly from the Settings menu."
+        },
+        {
+          keywords: ['beginner', 'start', 'dsa', 'no programming', 'scratch', 'where to start', 'newbie'],
+          answer: "If you are an absolute beginner with no programming background, don't worry! Start by learning a single language like C++, Java, or Python. Focus on basic syntax, loops, and functions first. Once comfortable, slowly transition into learning arrays and basic Data Structures (DSA) before attempting competitive programming."
+        },
+        {
+          keywords: ['sheet', 'which sheet', 'choose', 'striver', 'neetcode', 'best sheet'],
+          answer: "For absolute beginners, 'Striver's A2Z DSA Sheet' is highly recommended because it builds concepts step-by-step from zero to advanced. If you already know the basics and want to prepare for interviews quickly, 'NeetCode 150' or 'Blind 75' are great choices. You can track your progress on all of these directly in the Codeyx 'Sheets' tab!"
+        },
+        {
+          keywords: ['youtube', 'channel', 'preparation', 'learn', 'teacher', 'resources', 'roadmap'],
+          answer: "For learning DSA and programming from scratch, some of the best YouTube channels are 'Take U Forward' (Striver) for in-depth DSA, 'CodeHelp' (Love Babbar) for beginner-friendly coding bootcamps, and 'NeetCode' for algorithmic patterns. Pick one instructor you like and follow their playlist consistently!"
+        },
+        {
+          keywords: ['dsa roadmap', 'dsa order', 'which topic first', 'dsa preparation', 'topics'],
+          answer: "The recommended order to learn DSA is: 1. Arrays, 2. Strings, 3. Recursion, 4. Sorting, 5. Binary Search, 6. Linked List, 7. Stack & Queue, 8. Trees & BST, 9. Heap, 10. Graphs, 11. Greedy, 12. Dynamic Programming. Always clear basic concepts before moving to advanced data structures!"
+        },
+        {
+          keywords: ['web development', 'full stack', 'frontend', 'backend', 'mern', 'dev roadmap'],
+          answer: "To become a Full Stack Developer, start with Frontend (HTML, CSS, JavaScript, React). Then move to Backend (Node.js, Express) and Database (MongoDB, PostgreSQL). Build at least 2-3 full-stack projects like an E-commerce site or a social media clone to master the MERN stack!"
+        },
+        {
+          keywords: ['resume', 'placement', 'ats', 'internship', 'cv'],
+          answer: "For placements, ensure your resume is ATS-friendly (1 page, standard font, no complex columns). Highlight your Codeyx Profile, GitHub links, and Top 3 Projects. Focus on quantifying your impact (e.g., 'Reduced load time by 20%') instead of just listing technologies."
+        },
+        {
+          keywords: ['interview', 'hr interview', 'system design', 'behavioral'],
+          answer: "Interview prep has 3 pillars: 1. Core Subjects (OS, DBMS, Computer Networks), 2. Problem Solving (DSA), 3. Projects (Know every line of code you wrote). For HR rounds, use the STAR method (Situation, Task, Action, Result) to explain your past experiences confidently."
+        },
+        {
+          keywords: ['git', 'github', 'version control', 'pull request', 'open source'],
+          answer: "Git is essential! Learn basics like git clone, add, commit, push, and pull. To contribute to open source, fork a repository, create a new branch, make your changes, and submit a Pull Request (PR). You can showcase all your PRs directly on your Codeyx portfolio!"
+        },
+        {
+          keywords: ['career', 'startup', 'product based', 'job', 'remote', 'freelancing'],
+          answer: "To target Product-Based Companies, focus heavily on DSA and competitive programming. For Startups or Freelancing, strong Development skills (like React, Node.js) and a heavy project portfolio are more important. Codeyx helps you build a profile that attracts both types of employers!"
         }
       ];
 
@@ -183,7 +251,7 @@ export default function HelpCenterPage() {
             </div>
             <div className="p-6 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] hover:border-primary/30 transition-colors group cursor-pointer" onClick={() => setQuery("How can I delete my account?")}>
               <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors">How can I delete my account?</h3>
-              <p className="text-[var(--text-muted)]">Navigate to Settings -&gt; Account -&gt; Danger Zone, and click 'Delete Account'. Please note this action is irreversible and all your data will be permanently removed.</p>
+              <p className="text-[var(--text-muted)]">Navigate to Settings -&gt; Privacy & Account, and click the 'Security Settings' button. In the popup window, go to the 'Security' tab and select 'Delete account'. Please note this action is irreversible and all your data will be permanently removed.</p>
             </div>
           </div>
         </div>

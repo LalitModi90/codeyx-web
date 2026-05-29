@@ -30,6 +30,7 @@ export default function LoginPage() {
           
           <div className="relative z-10 flex justify-center">
             <SignIn 
+              routing="hash"
               appearance={{
                 layout: {
                   logoImageUrl: theme === 'dark' ? '/assets/logo-dark-them.png' : '/assets/logo-light-Them.png',
