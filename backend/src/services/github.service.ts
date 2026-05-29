@@ -1,11 +1,18 @@
 export const fetchGitHubStats = async (username: string) => {
   try {
-    // Basic user info
-    const userResponse = await fetch(`https://api.github.com/users/${username}`, {
-      headers: {
-        'User-Agent': 'Codeyx-Analytics',
-        // 'Authorization': `Bearer ${process.env.GITHUB_TOKEN}` // Recommended to prevent rate limits
+    const headers: Record<string, string> = {
+      'User-Agent': 'Codeyx-Analytics',
+    };
+    if (process.env.GITHUB_TOKEN) {
+      const tokens = process.env.GITHUB_TOKEN.split(',').map(t => t.trim()).filter(Boolean);
+      if (tokens.length > 0) {
+        const token = tokens[Math.floor(Math.random() * tokens.length)];
+        headers['Authorization'] = `Bearer ${token}`;
       }
+    }
+
+    const userResponse = await fetch(`https://api.github.com/users/${username}`, {
+      headers
     });
 
     if (!userResponse.ok) {
@@ -16,9 +23,7 @@ export const fetchGitHubStats = async (username: string) => {
 
     // Fetch user's public repositories to aggregate stats
     const reposResponse = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`, {
-      headers: {
-        'User-Agent': 'Codeyx-Analytics',
-      }
+      headers
     });
 
     let totalStars = 0;

@@ -5,6 +5,13 @@ import * as cheerio from 'cheerio';
 export class GitHubProvider implements IProfileProvider {
   public readonly platformName = 'GitHub';
 
+  private getRandomGithubToken(): string | null {
+    if (!process.env.GITHUB_TOKEN) return null;
+    const tokens = process.env.GITHUB_TOKEN.split(',').map(t => t.trim()).filter(Boolean);
+    if (tokens.length === 0) return null;
+    return tokens[Math.floor(Math.random() * tokens.length)];
+  }
+
   /**
    * Primary API: REST + GraphQL Hybrid
    */
@@ -13,8 +20,10 @@ export class GitHubProvider implements IProfileProvider {
       'User-Agent': 'Codeyx-Developer-Dashboard',
       'Accept': 'application/vnd.github.v3+json',
     };
-    if (process.env.GITHUB_TOKEN) {
-      headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+    
+    const token = this.getRandomGithubToken();
+    if (token) {
+      headers['Authorization'] = `token ${token}`;
     }
 
     const userUrl = `https://api.github.com/users/${username}`;
@@ -40,7 +49,7 @@ export class GitHubProvider implements IProfileProvider {
 
     // 1. Fetch GraphQL Contribution Calendar (If token is available)
     let contributionsCollection: any = null;
-    if (process.env.GITHUB_TOKEN) {
+    if (token) {
       try {
         const graphqlQuery = `
           query ($login: String!) {
@@ -65,7 +74,7 @@ export class GitHubProvider implements IProfileProvider {
           { login: username },
           {
             'User-Agent': 'Codeyx-Developer-Dashboard',
-            'Authorization': `bearer ${process.env.GITHUB_TOKEN}`
+            'Authorization': `bearer ${token}`
           }
         );
         contributionsCollection = graphData?.user?.contributionsCollection;

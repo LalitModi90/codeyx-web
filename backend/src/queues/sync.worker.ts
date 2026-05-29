@@ -26,7 +26,14 @@ export const setupWorkers = () => {
       } else if (platform === 'codeforces') {
         fetchedStats = await fetchCodeforcesStats(platformUsername || userId);
       } else if (platform === 'github') {
-        fetchedStats = await fetchGitHubStats(platformUsername || userId);
+        const manager = require('../services/fallbackManager').FallbackManager.getInstance();
+        const profile = await manager.resolveProfile('github', platformUsername || userId, true);
+        fetchedStats = {
+          totalSolved: profile.solved,
+          rating: profile.rating,
+          metadata: profile.metadata,
+          stats: profile
+        };
       } else if (platform === 'codechef') {
         fetchedStats = await fetchCodeChefStats(platformUsername || userId);
       } else if (platform === 'hackerrank') {
