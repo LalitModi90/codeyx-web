@@ -1507,23 +1507,23 @@ export default function PublicProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-college" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">College</label>
-                      <input id="edit-college" name="college" defaultValue={profile.college} placeholder="Your college or university" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-college" name="college" defaultValue={profile.college && profile.college !== 'Add College' && profile.college !== '—' ? profile.college : ''} placeholder="Your college or university" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-degree" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Degree</label>
-                      <input id="edit-degree" name="degree" defaultValue={profile.degree} placeholder="e.g. B.Tech" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-degree" name="degree" defaultValue={profile.degree && profile.degree !== 'Add Degree' && profile.degree !== '—' ? profile.degree : ''} placeholder="e.g. B.Tech" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-branch" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Branch</label>
-                      <input id="edit-branch" name="branch" defaultValue={profile.branch} placeholder="e.g. Computer Science" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-branch" name="branch" defaultValue={profile.branch && profile.branch !== 'Add Branch' && profile.branch !== '—' ? profile.branch : ''} placeholder="e.g. Computer Science" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-year" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Graduation Year</label>
-                      <input id="edit-year" name="year" defaultValue={profile.year} placeholder="e.g. 2021 - 2025" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-year" name="year" defaultValue={profile.year && profile.year !== 'Add Year' && profile.year !== '—' ? profile.year : ''} placeholder="e.g. 2021 - 2025" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5 md:col-span-2">
                       <label htmlFor="edit-jobRole" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Job Role</label>
-                      <input id="edit-jobRole" name="jobRole" defaultValue={profile.jobRole} placeholder="e.g. Software Engineer" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-jobRole" name="jobRole" defaultValue={profile.jobRole && profile.jobRole !== 'Add Job Role' && profile.jobRole !== '—' ? profile.jobRole : ''} placeholder="e.g. Software Engineer" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                   </div>
 
@@ -1531,27 +1531,27 @@ export default function PublicProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-email" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Email Address</label>
-                      <input id="edit-email" name="email" defaultValue={profile.email} type="email" placeholder="you@example.com" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-email" name="email" defaultValue={profile.email && profile.email !== 'Add Email' && profile.email !== '—' ? profile.email : ''} type="email" placeholder="you@example.com" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-portfolio" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Portfolio Website</label>
-                      <input id="edit-portfolio" name="portfolio" defaultValue={profile.portfolio} placeholder="yourportfolio.dev" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-portfolio" name="portfolio" defaultValue={profile.portfolio && profile.portfolio !== 'Add Portfolio' && profile.portfolio !== '—' ? profile.portfolio : ''} placeholder="yourportfolio.dev" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-github" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">GitHub</label>
-                      <input id="edit-github" name="github" defaultValue={profile.socialLinks?.github || ''} placeholder="github.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-github" name="github" defaultValue={profile.github && profile.github !== 'Add GitHub' && profile.github !== '—' ? profile.github : ''} placeholder="github.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-linkedin" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">LinkedIn</label>
-                      <input id="edit-linkedin" name="linkedin" defaultValue={profile.socialLinks?.linkedin || ''} placeholder="linkedin.com/in/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-linkedin" name="linkedin" defaultValue={profile.linkedin && profile.linkedin !== 'Add LinkedIn' && profile.linkedin !== '—' ? profile.linkedin : ''} placeholder="linkedin.com/in/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-twitter" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Twitter</label>
-                      <input id="edit-twitter" name="twitter" defaultValue={profile.socialLinks?.twitter || ''} placeholder="twitter.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-twitter" name="twitter" defaultValue={profile.twitter && profile.twitter !== 'Add Twitter' && profile.twitter !== '—' ? profile.twitter : ''} placeholder="twitter.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="edit-instagram" className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Instagram</label>
-                      <input id="edit-instagram" name="instagram" defaultValue={profile.socialLinks?.instagram || ''} placeholder="instagram.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
+                      <input id="edit-instagram" name="instagram" defaultValue={profile.instagram && profile.instagram !== 'Add Instagram' && profile.instagram !== '—' ? profile.instagram : ''} placeholder="instagram.com/username" className="w-full bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-black dark:text-white focus:outline-none focus:border-orange-500/50 transition-colors" />
                     </div>
                   </div>
                 </form>
