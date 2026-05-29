@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import { startNotificationCron } from './cron/notifications.cron';
 import { fetchAndStoreContests } from './services/contest.service';
 import { redis } from './utils/redis';
 import { Reminder } from './models/Reminder';
@@ -105,5 +106,6 @@ export const startCronJobs = () => {
         }
     });
 
+    startNotificationCron();
     console.log('[Cron] Cron jobs initialized. Background workers running.');
 };

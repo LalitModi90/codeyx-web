@@ -11,8 +11,25 @@ import { Bot, Sparkles } from 'lucide-react';
 
 // Trigger deployment build
 export default function Home() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Codeyx",
+    "url": "https://codeyx-web.vercel.app",
+    "description": "Codeyx is a modern coding platform that provides coding sheets, programming contests, developer projects, DSA practice, web development resources, and tools for students and developers to learn, practice, build projects, and improve their coding skills.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://codeyx-web.vercel.app/explore-sheets?search={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
     <main className="min-h-screen relative">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <TopNavbar />
       <Hero />
       <AnalyticsDashboard />

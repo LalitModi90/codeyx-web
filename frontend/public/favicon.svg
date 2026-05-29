@@ -1,0 +1,10 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="256" height="256" rx="50" fill="#09090B"/>
+  
+  <!-- Outer C Shape -->
+  <path d="M 180 65 A 70 70 0 1 0 180 191" fill="none" stroke="#FFC107" stroke-width="28" stroke-linecap="round"/>
+  
+  <!-- Code Symbol Inside -->
+  <text x="135" y="155" font-family="monospace" font-weight="900" font-size="64" fill="#FFFFFF" text-anchor="middle">&lt;/&gt;</text>
+</svg>

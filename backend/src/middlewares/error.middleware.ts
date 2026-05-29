@@ -21,5 +21,12 @@ export const errorHandler = (
     ...(process.env.NODE_ENV === 'development' ? { stack: error.stack } : {}),
   };
 
-  return res.status(error.statusCode).json(response);
+  if (error.statusCode === 500) {
+    console.error('[Unhandled Error]', error);
+    try {
+      require('fs').appendFileSync('error_log.txt', new Date().toISOString() + '\\n' + (error.stack || error.message) + '\\n\\n');
+    } catch (e) {}
+  }
+
+  return res.status(error.statusCode || 500).json(response);
 };

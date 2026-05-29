@@ -134,7 +134,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             // Existing user detected! Instate their profile and bypass onboarding.
             updateProfile({
               ...dbProfile,
-              username: dbProfile.username || profile.username,
+              username: dbProfile.username || profile.username || user?.username || '',
               firstName: user.firstName || '',
               lastName: user.lastName || '',
               isOnboarded: true,
@@ -144,22 +144,22 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             // Brand-new user with incomplete details: force onboarding
             updateProfile({
               ...dbProfile,
-              username: dbProfile.username || profile.username,
+              username: dbProfile.username || profile.username || user?.username || '',
               firstName: user.firstName || '',
               lastName: user.lastName || '',
               isOnboarded: false,
-              step1Complete: false
+              step1Complete: profile.step1Complete || false
             });
           }
         } else {
           // No profile in database yet: force onboarding
           updateProfile({
             ...defaultProfile,
-            username: profile.username,
+            username: profile.username || user?.username || '',
             firstName: user.firstName || '',
             lastName: user.lastName || '',
             isOnboarded: false,
-            step1Complete: false
+            step1Complete: profile.step1Complete || false
           });
         }
       } catch (err) {

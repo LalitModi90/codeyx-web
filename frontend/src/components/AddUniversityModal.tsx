@@ -110,6 +110,7 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
                   className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                   placeholder="e.g. Indian Institute of Technology Delhi"
                   title="University Name"
+                  aria-label="University Name"
                 />
               </div>
 
@@ -123,6 +124,7 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
                   className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                   placeholder="e.g. IIT Delhi"
                   title="Short Name"
+                  aria-label="Short Name"
                 />
               </div>
 
@@ -137,6 +139,7 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
                     className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                     placeholder="e.g. New Delhi"
                     title="City"
+                    aria-label="City"
                   />
                 </div>
                 <div>
@@ -149,6 +152,7 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
                     className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                     placeholder="e.g. Delhi"
                     title="State"
+                    aria-label="State"
                   />
                 </div>
               </div>
@@ -163,6 +167,7 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
                   className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                   placeholder="e.g. India"
                   title="Country"
+                  aria-label="Country"
                 />
               </div>
 

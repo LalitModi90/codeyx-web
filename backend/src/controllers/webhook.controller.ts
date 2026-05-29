@@ -16,6 +16,7 @@ import { addCleanupJob } from '../queues/cleanup.queue';
 import { emitToUser } from '../socket';
 import { redisClient } from '../config/redis.config';
 import { executeCascadeCleanup } from '../services/cleanup.service';
+import { sendAdminAlertEmail, sendWelcomeEmail } from '../services/mail.service';
 
 export const clerkWebhookHandler = async (req: Request, res: Response) => {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -76,6 +77,21 @@ export const clerkWebhookHandler = async (req: Request, res: Response) => {
 
       console.log(`[Webhook] System setup complete for new user: ${id}`);
       emitToUser(id, 'SYSTEM_SETUP_COMPLETE', { userId: id });
+
+      // Send Welcome Email to User
+      if (email) {
+        sendWelcomeEmail(email, evt.data.first_name || '').catch(console.error);
+      }
+
+      // Notify Admin
+      const htmlMsg = `
+        <h3>New User Registered!</h3>
+        <p><strong>Name:</strong> ${evt.data.first_name || ''} ${evt.data.last_name || ''}</p>
+        <p><strong>Email:</strong> ${email || 'N/A'}</p>
+        <p><strong>Clerk ID:</strong> ${id}</p>
+        <p>Time: ${new Date().toLocaleString()}</p>
+      `;
+      sendAdminAlertEmail('New User Registration', htmlMsg).catch(console.error);
     }
 
     if (eventType === 'user.updated') {
@@ -93,6 +109,15 @@ export const clerkWebhookHandler = async (req: Request, res: Response) => {
 
     if (eventType === 'user.deleted') {
       console.log(`[Webhook] Commencing immediate soft delete / profile deactivation for Clerk ID ${id}...`);
+
+      // Notify Admin
+      const htmlMsg = `
+        <h3 style="color: red;">User Account Deleted</h3>
+        <p><strong>Clerk ID:</strong> ${id}</p>
+        <p>Time: ${new Date().toLocaleString()}</p>
+        <p>The cleanup cascade has been triggered for this user.</p>
+      `;
+      sendAdminAlertEmail('User Deleted Account', htmlMsg).catch(console.error);
 
       // 1. Fetch follower/following connections to invalidate related user caches immediately
       let followers: string[] = [];

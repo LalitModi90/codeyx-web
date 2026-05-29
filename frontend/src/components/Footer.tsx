@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { TerminalSquare, Instagram, Github, Linkedin, Mail, MapPin } from 'lucide-react';
+import { Instagram, Github, Linkedin, Mail, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Footer() {
@@ -9,17 +9,18 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           {/* Brand & About */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-2">
-              <div className="text-primary">
-                <TerminalSquare size={28} />
-              </div>
-              <span className="font-bold text-2xl tracking-tight">Codeyx</span>
-            </div>
+          <div className="space-y-4">
+            <Link href="/" className="flex items-center select-none group">
+              <img
+                src="/assets/logo-dark-them.png"
+                alt="Codeyx Logo"
+                className="h-[100px] w-auto object-contain transition-transform group-hover:scale-105 -mt-8 -mb-6"
+              />
+            </Link>
             <p className="text-[var(--text-muted)] leading-relaxed">
               The ultimate portfolio and analytics platform for elite developers. Showcase your skills, track your progress, and stand out in the tech industry.
             </p>
-            <div className="flex gap-4">
+            <div className="flex gap-1 pt-2">
               <a href="https://www.instagram.com/mr.lalitmodi90/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-[var(--border-color)] text-[var(--text-muted)] hover:text-white hover:bg-primary transition-all">
                 <Instagram size={20} />
               </a>

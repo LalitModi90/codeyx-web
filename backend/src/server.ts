@@ -9,7 +9,6 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import { createServer } from 'http';
 import { connectDB } from './database/connectDB';
@@ -87,7 +86,8 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Data sanitization against NoSQL query injection
-app.use(mongoSanitize());
+// Note: express-mongo-sanitize is removed because it is incompatible with Express 5 (req.query is read-only).
+// Ensure Mongoose queries are properly typed to avoid NoSQL injection.
 
 // Prevent HTTP parameter pollution
 app.use(hpp());
@@ -98,13 +98,13 @@ app.use(cors({
   credentials: true,
 }));
 
-// Apply Clerk middleware globally so that requireAuth works
-app.use(withClerkAuth);
-
-// Basic Route
+// Basic Route (Health Check)
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'Codeyx API is running successfully!' });
 });
+
+// Apply Clerk middleware globally for all subsequent routes (except webhooks which are handled above)
+app.use(withClerkAuth);
 
 // Define API Routes here
 app.use('/api/platforms', platformRoutes);

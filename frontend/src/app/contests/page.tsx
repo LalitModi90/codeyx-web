@@ -388,11 +388,18 @@ export default function ContestsPage() {
                                } ${isToday ? 'shadow-[0_0_8px_#FF8A00]' : ''}`} /> 
                                {contest.time}
                             </div>
-                            <button onClick={() => { setSelectedContest(contest); setReminderStatusMsg(''); }} className="text-sm font-black text-white flex items-center gap-2 hover:text-[#FF8A00] transition-colors text-left">
-                              <TrendingUp size={14} className={contest.iconColor} /> {contest.name}
+                            <button onClick={() => { setSelectedContest(contest); setReminderStatusMsg(''); }} className="text-sm font-black text-white flex items-start gap-2 hover:text-white transition-colors text-left">
+                              <span className={`text-[9px] mt-0.5 px-1.5 py-0.5 rounded border font-black uppercase tracking-widest shrink-0 ${
+                                contest.plat.toLowerCase().includes('leetcode') ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
+                                contest.plat.toLowerCase().includes('codechef') ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                                contest.plat.toLowerCase().includes('codeforces') ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                'bg-white/5 text-gray-400 border-white/10'
+                              }`}>
+                                {contest.plat}
+                              </span>
+                              <span className="hover:text-[#FF8A00] transition-colors">{contest.name}</span>
                             </button>
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="text-[10px] font-bold text-gray-500">{contest.plat}</span>
+                            <div className="flex items-center justify-end mt-1">
                               <span className={`text-[10px] font-bold ${contest.diffColor}`}>{contest.diff}</span>
                             </div>
                           </div>

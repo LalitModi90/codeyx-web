@@ -1,0 +1,61 @@
+2026-05-29T04:30:44.645Z\nTypeError: Cannot set property query of #<IncomingMessage> which has only a getter
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:113:18
+    at Array.forEach (<anonymous>)
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:110:44
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (F:\Codeyx\backend\node_modules\router\index.js:342:13)
+    at F:\Codeyx\backend\node_modules\router\index.js:297:9
+    at processParams (F:\Codeyx\backend\node_modules\router\index.js:582:12)
+    at next (F:\Codeyx\backend\node_modules\router\index.js:291:5)
+    at logger (F:\Codeyx\backend\node_modules\morgan\index.js:144:5)
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)\n\n2026-05-29T04:30:44.661Z\nTypeError: Cannot set property query of #<IncomingMessage> which has only a getter
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:113:18
+    at Array.forEach (<anonymous>)
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:110:44
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (F:\Codeyx\backend\node_modules\router\index.js:342:13)
+    at F:\Codeyx\backend\node_modules\router\index.js:297:9
+    at processParams (F:\Codeyx\backend\node_modules\router\index.js:582:12)
+    at next (F:\Codeyx\backend\node_modules\router\index.js:291:5)
+    at logger (F:\Codeyx\backend\node_modules\morgan\index.js:144:5)
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)\n\n2026-05-29T04:30:44.971Z\nTypeError: Cannot set property query of #<IncomingMessage> which has only a getter
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:113:18
+    at Array.forEach (<anonymous>)
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:110:44
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (F:\Codeyx\backend\node_modules\router\index.js:342:13)
+    at F:\Codeyx\backend\node_modules\router\index.js:297:9
+    at processParams (F:\Codeyx\backend\node_modules\router\index.js:582:12)
+    at next (F:\Codeyx\backend\node_modules\router\index.js:291:5)
+    at logger (F:\Codeyx\backend\node_modules\morgan\index.js:144:5)
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)\n\n2026-05-29T04:30:44.975Z\nTypeError: Cannot set property query of #<IncomingMessage> which has only a getter
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:113:18
+    at Array.forEach (<anonymous>)
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:110:44
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (F:\Codeyx\backend\node_modules\router\index.js:342:13)
+    at F:\Codeyx\backend\node_modules\router\index.js:297:9
+    at processParams (F:\Codeyx\backend\node_modules\router\index.js:582:12)
+    at next (F:\Codeyx\backend\node_modules\router\index.js:291:5)
+    at logger (F:\Codeyx\backend\node_modules\morgan\index.js:144:5)
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)\n\n2026-05-29T04:31:15.273Z\nTypeError: Cannot set property query of #<IncomingMessage> which has only a getter
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:113:18
+    at Array.forEach (<anonymous>)
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:110:44
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (F:\Codeyx\backend\node_modules\router\index.js:342:13)
+    at F:\Codeyx\backend\node_modules\router\index.js:297:9
+    at processParams (F:\Codeyx\backend\node_modules\router\index.js:582:12)
+    at next (F:\Codeyx\backend\node_modules\router\index.js:291:5)
+    at logger (F:\Codeyx\backend\node_modules\morgan\index.js:144:5)
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)\n\n2026-05-29T04:31:18.377Z\nTypeError: Cannot set property query of #<IncomingMessage> which has only a getter
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:113:18
+    at Array.forEach (<anonymous>)
+    at F:\Codeyx\backend\node_modules\express-mongo-sanitize\index.js:110:44
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)
+    at trimPrefix (F:\Codeyx\backend\node_modules\router\index.js:342:13)
+    at F:\Codeyx\backend\node_modules\router\index.js:297:9
+    at processParams (F:\Codeyx\backend\node_modules\router\index.js:582:12)
+    at next (F:\Codeyx\backend\node_modules\router\index.js:291:5)
+    at logger (F:\Codeyx\backend\node_modules\morgan\index.js:144:5)
+    at Layer.handleRequest (F:\Codeyx\backend\node_modules\router\lib\layer.js:152:17)\n\n

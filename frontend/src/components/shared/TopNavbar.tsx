@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useUser, useClerk, SignInButton, SignedOut, SignedIn, UserButton } from '@clerk/nextjs';
-import { Search, Sun, Moon, Bell, ChevronDown, Briefcase, RefreshCw, Activity, ExternalLink, LogOut, User, Settings, Lock, Flame, Code2 } from 'lucide-react';
+import { Search, Sun, Moon, Bell, ChevronDown, Briefcase, RefreshCw, Activity, ExternalLink, LogOut, User, Settings, Lock, Flame, Code2, Trophy, Clock, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { platformService } from '../../services/platform.service';
@@ -32,6 +32,16 @@ export default function TopNavbar() {
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const profileMenuRef = React.useRef<HTMLDivElement>(null);
   const [isDarkMode, setIsDarkMode] = React.useState(true);
+
+  const [showNotifications, setShowNotifications] = React.useState(false);
+  const notifRef = React.useRef<HTMLDivElement>(null);
+
+  const mockNotifications = [
+    { id: 1, title: 'Codeforces Round (Div. 2)', message: 'Contest starts in 5 minutes!', time: 'Just now', read: false, type: 'urgent' },
+    { id: 2, title: 'Weekend Dev Challenge 52', message: 'Contest starts in 30 minutes!', time: '25m ago', read: false, type: 'soon' },
+    { id: 3, title: 'Leaderboard Updated', message: 'Congratulations! You are now ranked #14 Globally.', time: '1 hr ago', read: true, type: 'success' },
+    { id: 4, title: 'Weekly Contest 504', message: 'Contest starts today at 08:00 AM', time: '5 hrs ago', read: true, type: 'info' }
+  ];
 
   const [realPlatforms, setRealPlatforms] = React.useState<any[]>([]);
   const [lastSyncedAt, setLastSyncedAt] = React.useState<Date | null>(null);
@@ -128,6 +138,16 @@ export default function TopNavbar() {
   };
 
   React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
@@ -194,18 +214,28 @@ export default function TopNavbar() {
       {/* Spacer to maintain document flow */}
       <div className="h-16 w-full shrink-0" />
       <div className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ease-out flex justify-center w-full ${isScrolled ? 'pt-4 px-4' : 'pt-0 px-0'}`}>
-        <nav className={`transition-all duration-500 ease-out flex items-center border ${border} backdrop-blur-xl bg-white/90 dark:bg-[#09090B]/90 ${isScrolled ? 'h-14 px-8 rounded-full shadow-2xl shadow-[#FF8A00]/10 border-gray-200 dark:border-white/10' : 'h-16 w-full pl-2 pr-4 rounded-none justify-between border-t-0 border-l-0 border-r-0'}`}>
+        <motion.nav 
+          layout
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className={`flex items-center border ${border} backdrop-blur-xl bg-white/90 dark:bg-[#09090B]/90 ${isScrolled ? 'h-14 px-8 rounded-full shadow-2xl shadow-[#FF8A00]/10 border-gray-200 dark:border-white/10' : 'h-16 w-full pl-2 pr-4 rounded-none justify-between border-t-0 border-l-0 border-r-0'}`}
+        >
           {/* Left: Branding & Search */}
-          <div className={`flex items-center gap-0 overflow-hidden transition-all duration-500 ease-out whitespace-nowrap ${isScrolled ? 'max-w-0 opacity-0' : 'max-w-[450px] opacity-100'}`}>
-            <Link href="/" className="flex items-center group pr-2">
-              <div className="relative h-12 md:h-[120px] transition-transform group-hover:scale-105 origin-left">
-                <img src="/assets/logo-dark-them.png" alt="Codeyx Logo" className="h-full w-auto object-left" />
-              </div>
+          <motion.div 
+            layout
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className={`flex-1 flex items-center justify-start gap-0 overflow-hidden whitespace-nowrap ${isScrolled ? 'hidden opacity-0' : 'opacity-100'}`}
+          >
+            <Link href="/" className="flex items-center group pr-2 select-none ml-6">
+              <img 
+                src={isDarkMode ? "/assets/logo-dark-them.png" : "/assets/logo-light-Them.png"} 
+                alt="Codeyx Logo" 
+                className="h-[75px] w-auto object-contain transition-transform group-hover:scale-105 scale-110 origin-left" 
+              />
             </Link>
-          </div>
+          </motion.div>
 
           {/* Center: Nav Links */}
-          <div className={`hidden xl:flex items-center gap-4 transition-all duration-500 ease-out ${isScrolled ? 'mx-auto' : 'absolute left-1/2 -translate-x-1/2'}`}>
+          <motion.div layout transition={{ duration: 0.5, ease: "easeOut" }} className="hidden xl:flex shrink-0 items-center gap-4">
             {(pathname === '/'
               ? [
                 { label: 'Sheets', href: '/explore-sheets', isPrivate: false },
@@ -419,20 +449,76 @@ export default function TopNavbar() {
                 </div>
               );
             })}
-          </div>
+          </motion.div>
 
           {/* Right: Actions */}
-          <div className={`flex items-center gap-4 transition-all duration-500 ease-out whitespace-nowrap justify-end overflow-hidden ${isScrolled ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[300px] opacity-100 pointer-events-auto'}`}>
+          <motion.div 
+            layout 
+            transition={{ duration: 0.5, ease: "easeOut" }} 
+            className={`flex-1 flex items-center justify-end gap-4 whitespace-nowrap overflow-hidden ${isScrolled ? 'hidden opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}`}
+          >
 
             <div className="flex items-center gap-2">
               <button onClick={toggleTheme} aria-label="Toggle Theme" title="Toggle Theme" className={`p-2 rounded-xl border ${border} text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all`}>
                 {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
               </button>
               <SignedIn>
-                <button aria-label="Notifications" title="Notifications" className={`relative p-2 rounded-xl border ${border} text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all`}>
-                  <Bell size={15} />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8A00] rounded-full border-2 border-[#09090B]" />
-                </button>
+                <div className="relative" ref={notifRef}>
+                  <button 
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    aria-label="Notifications" 
+                    title="Notifications" 
+                    className={`relative p-2 rounded-xl border ${border} text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all ${showNotifications ? 'bg-white/5 border-white/20 text-white' : ''}`}
+                  >
+                    <Bell size={15} />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8A00] rounded-full border-2 border-[#09090B] animate-pulse" />
+                  </button>
+
+                  {/* Notifications Dropdown */}
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 top-[120%] w-80 bg-[#121214]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100]"
+                      >
+                        <div className="flex items-center justify-between p-4 border-b border-white/5">
+                          <h3 className="text-sm font-black text-white">Notifications</h3>
+                          <button className="text-[10px] text-[#FF8A00] hover:text-[#FF8A00]/80 font-bold transition-colors">
+                            Mark all as read
+                          </button>
+                        </div>
+                        <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
+                          {mockNotifications.map((n) => (
+                            <div key={n.id} className={`p-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-pointer flex gap-3 ${!n.read ? 'bg-white/[0.03]' : ''}`}>
+                              <div className="shrink-0 mt-0.5">
+                                {n.type === 'urgent' ? <Flame size={16} className="text-red-500" /> :
+                                 n.type === 'soon' ? <Clock size={16} className="text-[#FF8A00]" /> :
+                                 n.type === 'success' ? <Trophy size={16} className="text-yellow-400" /> :
+                                 <CalendarDays size={16} className="text-blue-400" />}
+                              </div>
+                              <div className="flex-1 flex flex-col gap-1">
+                                <div className="flex items-center justify-between">
+                                  <h4 className={`text-xs font-bold ${!n.read ? 'text-white' : 'text-gray-300'}`}>{n.title}</h4>
+                                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#FF8A00]" />}
+                                </div>
+                                <p className="text-[10px] text-gray-500 font-medium leading-relaxed">{n.message}</p>
+                                <span className="text-[9px] text-gray-600 mt-1 font-bold">{n.time}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="p-3 border-t border-white/5 flex justify-center">
+                          <Link href="/dashboard/notifications" className="text-[10px] text-gray-400 hover:text-white font-bold transition-colors">
+                            View all notifications →
+                          </Link>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </SignedIn>
             </div>
 
@@ -463,8 +549,8 @@ export default function TopNavbar() {
                 </Link>
               </div>
             </SignedOut>
-          </div>
-        </nav>
+          </motion.div>
+        </motion.nav>
       </div>
     </>
   );

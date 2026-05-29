@@ -32,7 +32,7 @@ export default function SolvedCheckbox({
     <button
       type="button"
       role="checkbox"
-      aria-checked={isSolved}
+      aria-checked={isSolved ? 'true' : 'false'}
       aria-label={isSolved ? 'Mark problem as unsolved' : 'Mark problem as solved'}
       disabled={isDisabled}
       onClick={isDisabled ? undefined : onToggle}
