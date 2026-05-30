@@ -79,8 +79,8 @@ export class FallbackManager {
           selectedStrategy = 'backup';
           try {
             return await withRetry(() => provider.fetchBackup(username), {
-              retries: 2,
-              timeoutMs: 6000,
+              retries: 1, // Reduced retries so it doesn't take forever
+              timeoutMs: 40000, // 40s to allow multiple sequential Render requests
             });
           } catch (backupErr: any) {
             console.warn(`[FallbackManager] Backup API failed: ${backupErr.message}. Cascading to Scraper...`);

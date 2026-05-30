@@ -37,12 +37,20 @@ export default function TopNavbar() {
   const [showNotifications, setShowNotifications] = React.useState(false);
   const notifRef = React.useRef<HTMLDivElement>(null);
 
-  const mockNotifications = [
+  const [notifications, setNotifications] = React.useState([
     { id: 1, title: 'Codeforces Round (Div. 2)', message: 'Contest starts in 5 minutes!', time: 'Just now', read: false, type: 'urgent' },
     { id: 2, title: 'Weekend Dev Challenge 52', message: 'Contest starts in 30 minutes!', time: '25m ago', read: false, type: 'soon' },
     { id: 3, title: 'Leaderboard Updated', message: 'Congratulations! You are now ranked #14 Globally.', time: '1 hr ago', read: true, type: 'success' },
     { id: 4, title: 'Weekly Contest 504', message: 'Contest starts today at 08:00 AM', time: '5 hrs ago', read: true, type: 'info' }
-  ];
+  ]);
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+  };
 
   const [realPlatforms, setRealPlatforms] = React.useState<any[]>([]);
   const [lastSyncedAt, setLastSyncedAt] = React.useState<Date | null>(null);
@@ -483,7 +491,9 @@ export default function TopNavbar() {
                     className={`relative p-2 rounded-xl border ${border} text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all ${showNotifications ? 'bg-white/5 border-white/20 text-white' : ''}`}
                   >
                     <Bell size={15} />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8A00] rounded-full border-2 border-[#09090B] animate-pulse" />
+                    {notifications.some(n => !n.read) && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8A00] rounded-full border-2 border-[#09090B] animate-pulse" />
+                    )}
                   </button>
 
                   {/* Notifications Dropdown */}
@@ -498,12 +508,29 @@ export default function TopNavbar() {
                       >
                         <div className="flex items-center justify-between p-4 border-b border-white/5">
                           <h3 className="text-sm font-black text-white">Notifications</h3>
-                          <button className="text-[10px] text-[#FF8A00] hover:text-[#FF8A00]/80 font-bold transition-colors">
-                            Mark all as read
-                          </button>
+                          {notifications.length > 0 && (
+                            <div className="flex items-center gap-3">
+                              <button 
+                                onClick={markAllAsRead}
+                                className="text-[10px] text-[#FF8A00] hover:text-[#FF8A00]/80 font-bold transition-colors"
+                              >
+                                Mark all as read
+                              </button>
+                              <button 
+                                onClick={clearAllNotifications}
+                                className="text-[10px] text-gray-400 hover:text-white font-bold transition-colors"
+                              >
+                                Clear all
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
-                          {mockNotifications.map((n) => (
+                          {notifications.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500 text-xs font-medium">
+                              No new notifications
+                            </div>
+                          ) : notifications.map((n) => (
                             <div key={n.id} className={`p-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-pointer flex gap-3 ${!n.read ? 'bg-white/[0.03]' : ''}`}>
                               <div className="shrink-0 mt-0.5">
                                 {n.type === 'urgent' ? <Flame size={16} className="text-red-500" /> :

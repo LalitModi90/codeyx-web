@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { clerkClient } from '@clerk/clerk-sdk-node';
 import { PlatformStats } from '../models/platformStats.model';
 import { Profile } from '../models/profile.model';
+import { User } from '../models/user.model';
 
 // ─── Helper: compute radar axes and weighted Codeyx Score ────────────────────
 function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
@@ -195,9 +196,30 @@ export const getUserLeaderboardProfile = async (req: Request, res: Response) => 
     try {
         const { userId } = req.params;
 
-        // Fetch user directly from Clerk (always up to date)
-        const clerkUser = await clerkClient.users.getUser(userId as string);
-        if (!clerkUser) return res.status(404).json({ success: false, message: 'User not found' });
+        // Fetch user directly from local DB for speed, fallback to Clerk if missing
+        let clerkUser: any = await User.findOne({ clerkUserId: userId }).lean();
+        
+        if (!clerkUser) {
+            const rawUser = await clerkClient.users.getUser(userId as string);
+            if (!rawUser) return res.status(404).json({ success: false, message: 'User not found' });
+            clerkUser = {
+                id: rawUser.id,
+                firstName: rawUser.firstName,
+                lastName: rawUser.lastName,
+                emailAddresses: rawUser.emailAddresses,
+                username: rawUser.username,
+                imageUrl: rawUser.imageUrl,
+            };
+        } else {
+            clerkUser = {
+                id: clerkUser.clerkUserId,
+                firstName: clerkUser.firstName,
+                lastName: clerkUser.lastName,
+                emailAddresses: [{ emailAddress: clerkUser.email }],
+                username: clerkUser.username,
+                imageUrl: clerkUser.avatarUrl,
+            };
+        }
 
         const stats = await PlatformStats.find({ userId }).lean();
         const userProfile = await Profile.findOne({ userId }).lean();

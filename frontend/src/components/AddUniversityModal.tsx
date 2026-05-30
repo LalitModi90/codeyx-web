@@ -16,7 +16,7 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [country, setCountry] = useState('India');
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [similarInstitutions, setSimilarInstitutions] = useState<any[]>([]);
@@ -59,7 +59,7 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
@@ -80,7 +80,7 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
                   <div className="mt-2 space-y-2">
                     <p className="font-bold text-white">Did you mean one of these?</p>
                     {similarInstitutions.map((sim, i) => (
-                      <button 
+                      <button
                         key={i}
                         type="button"
                         onClick={() => {
@@ -100,75 +100,59 @@ export default function AddUniversityModal({ isOpen, onClose, onSuccess, initial
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="uni-name" className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">University Name *</label>
-                <input 
-                  id="uni-name"
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">University Name *</label>
+                <input
                   required
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                   placeholder="e.g. Indian Institute of Technology Delhi"
-                  title="University Name"
-                  aria-label="University Name"
                 />
               </div>
 
               <div>
-                <label htmlFor="uni-shortname" className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Short Name (Optional)</label>
-                <input 
-                  id="uni-shortname"
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Short Name (Optional)</label>
+                <input
                   type="text"
                   value={shortName}
                   onChange={(e) => setShortName(e.target.value)}
                   className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                   placeholder="e.g. IIT Delhi"
-                  title="Short Name"
-                  aria-label="Short Name"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="uni-city" className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">City</label>
-                  <input 
-                    id="uni-city"
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">City</label>
+                  <input
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                     placeholder="e.g. New Delhi"
-                    title="City"
-                    aria-label="City"
                   />
                 </div>
                 <div>
-                  <label htmlFor="uni-state" className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">State</label>
-                  <input 
-                    id="uni-state"
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">State</label>
+                  <input
                     type="text"
                     value={state}
                     onChange={(e) => setState(e.target.value)}
                     className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
                     placeholder="e.g. Delhi"
-                    title="State"
-                    aria-label="State"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="uni-country" className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Country</label>
-                <input 
-                  id="uni-country"
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A1A1AA] mb-1.5 ml-1">Country</label>
+                <input
                   type="text"
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
                   className="w-full bg-[#09090B] border border-white/5 text-[#FAFAFA] text-xs rounded-xl py-3 px-4 focus:border-orange-500 focus:outline-none transition-all"
-                  placeholder="e.g. India"
-                  title="Country"
-                  aria-label="Country"
-                />
+                ></input>
               </div>
 
               <div className="pt-4 border-t border-white/5">

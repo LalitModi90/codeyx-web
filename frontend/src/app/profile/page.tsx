@@ -458,68 +458,113 @@ export default function PublicProfilePage() {
         if (pArray && pArray.length > 0) {
           setPlatformsData(prev => prev.map(p => {
             const realData = pArray.find((item: any) => item.platform === p.platformId);
-            if (!realData) return p;
+            if (!realData) return { ...p, isConnected: false };
 
             const total = realData.totalSolved || 0;
             const rating = realData.rating || 0;
             const stats = realData.stats || {};
+            const pUsername = realData.username || targetUserId;
+
+            let platformLink = '#';
+            if (p.platformId === 'leetcode') platformLink = `https://leetcode.com/u/${pUsername}`;
+            else if (p.platformId === 'codeforces') platformLink = `https://codeforces.com/profile/${pUsername}`;
+            else if (p.platformId === 'codechef') platformLink = `https://www.codechef.com/users/${pUsername}`;
+            else if (p.platformId === 'github') platformLink = `https://github.com/${pUsername}`;
+            else if (p.platformId === 'geeksforgeeks') platformLink = `https://auth.geeksforgeeks.org/user/${pUsername}`;
+            else if (p.platformId === 'hackerrank') platformLink = `https://www.hackerrank.com/profile/${pUsername}`;
+            else if (p.platformId === 'atcoder') platformLink = `https://atcoder.jp/users/${pUsername}`;
+            else if (p.platformId === 'hackerearth') platformLink = `https://www.hackerearth.com/@${pUsername}`;
 
             if (p.platformId === 'leetcode') {
+              const easy = stats.easySolved || stats.extra?.easy || stats.metadata?.extra?.easy || stats.easy || 0;
+              const medium = stats.mediumSolved || stats.extra?.medium || stats.metadata?.extra?.medium || stats.medium || 0;
+              const hard = stats.hardSolved || stats.extra?.hard || stats.metadata?.extra?.hard || stats.hard || 0;
+              
+              // Extract numeric rank if it comes as a string like "Global Rank: 883869"
+              let parsedGlobalRank = 0;
+              if (stats.extra?.globalRanking) {
+                parsedGlobalRank = parseInt(stats.extra.globalRanking);
+              } else if (typeof stats.globalRank === 'string') {
+                const match = stats.globalRank.match(/\d+/);
+                if (match) parsedGlobalRank = parseInt(match[0]);
+              } else if (typeof stats.globalRank === 'number') {
+                parsedGlobalRank = stats.globalRank;
+              }
+
+              const topPct = stats.extra?.topPercentage || stats.metadata?.extra?.topPercentage || 0;
+
               return {
                 ...p,
+                isConnected: true,
+                link: platformLink,
                 primaryStatValue: total.toLocaleString(),
-                difficulty: {
-                  easy: stats.easy || 0,
-                  medium: stats.medium || 0,
-                  hard: stats.hard || 0
-                },
+                difficulty: { easy, medium, hard },
                 stats: [
                   { label: 'Current Rating', value: rating > 0 ? rating.toLocaleString() : '—' },
-                  { label: 'Top Rating', value: rating > 0 ? rating.toLocaleString() : '—', color: 'text-orange-500' },
-                  { label: 'Global Rank', value: stats.rank ? `#${stats.rank.toLocaleString()}` : '—' },
-                  { label: 'Streak', value: 'Active', color: 'text-orange-500' }
-                ]
+                  { label: 'Top Rating', value: stats.highestRating > 0 ? stats.highestRating.toLocaleString() : '—', color: 'text-orange-500' },
+                  { label: 'Global Rank', value: parsedGlobalRank > 0 ? `#${parsedGlobalRank.toLocaleString()}` : '—' },
+                  { label: 'Streak', value: stats.extra?.streak > 0 ? `${stats.extra.streak} Days` : 'Active', color: 'text-orange-500' }
+                ],
+                topPercentage: topPct
               };
             }
 
             if (p.platformId === 'codeforces') {
+              const easy = stats.easySolved || stats.extra?.easy || stats.metadata?.extra?.easy || stats.easy || 0;
+              const medium = stats.mediumSolved || stats.extra?.medium || stats.metadata?.extra?.medium || stats.medium || 0;
+              const hard = stats.hardSolved || stats.extra?.hard || stats.metadata?.extra?.hard || stats.hard || 0;
+              const currentRank = stats.stars || stats.extra?.rank || stats.metadata?.extra?.rank || '—';
+
               return {
                 ...p,
+                isConnected: true,
+                link: platformLink,
                 primaryStatValue: total.toLocaleString(),
+                difficulty: { easy, medium, hard },
                 stats: [
                   { label: 'Current Rating', value: rating > 0 ? rating.toLocaleString() : '—' },
-                  { label: 'Top Rating', value: rating > 0 ? rating.toLocaleString() : '—', color: 'text-purple-500' },
-                  { label: 'Current Rank', value: stats.rank || '—' },
+                  { label: 'Top Rating', value: stats.highestRating > 0 ? stats.highestRating.toLocaleString() : '—', color: 'text-purple-500' },
+                  { label: 'Current Rank', value: typeof currentRank === 'string' ? currentRank.charAt(0).toUpperCase() + currentRank.slice(1) : currentRank },
                   { label: 'Streak', value: 'Active', color: 'text-blue-400' }
                 ]
               };
             }
 
             if (p.platformId === 'codechef') {
+              const easy = stats.easySolved || stats.partiallySolved || stats.extra?.partiallySolved || stats.metadata?.extra?.partiallySolved || 0;
+              const medium = stats.mediumSolved || stats.fullySolved || stats.extra?.fullySolved || stats.metadata?.extra?.fullySolved || 0;
+              const hard = stats.hardSolved || stats.extra?.hard || stats.metadata?.extra?.hard || 0;
+
               return {
                 ...p,
+                isConnected: true,
+                link: platformLink,
                 primaryStatValue: total.toLocaleString(),
+                difficulty: { easy, medium, hard },
                 stats: [
                   { label: 'Current Rating', value: rating > 0 ? rating.toLocaleString() : '—' },
-                  { label: 'Stars', value: stats.stars ? `${stats.stars} ★` : '—', color: 'text-amber-500' },
-                  { label: 'Global Rank', value: stats.globalRank ? `#${stats.globalRank}` : '—' },
-                  { label: 'Highest Rating', value: stats.highestRating ? stats.highestRating.toString() : '—' }
+                  { label: 'Stars', value: stats.starsNum ? `${stats.starsNum} ★` : (stats.stars ? `${stats.stars}` : '—'), color: 'text-amber-500' },
+                  { label: 'Global Rank', value: stats.globalRank ? `#${stats.globalRank.toLocaleString()}` : '—' },
+                  { label: 'Highest Rating', value: stats.highestRating > 0 ? stats.highestRating.toString() : '—' }
                 ]
               };
             }
 
             if (p.platformId === 'github') {
+              const reposCount = Array.isArray(stats.metadata?.extra?.repositories) ? stats.metadata.extra.repositories.length : 0;
               return {
                 ...p,
-                primaryStatValue: (stats.totalStars || 0).toLocaleString(),
+                isConnected: true,
+                link: platformLink,
+                primaryStatValue: total.toLocaleString(),
                 stats: [
-                  { label: 'Repositories', value: (stats.repos || 0).toLocaleString() },
+                  { label: 'Repositories', value: reposCount.toLocaleString() },
                   { label: 'Followers', value: (stats.followers || 0).toLocaleString() }
                 ]
               };
             }
 
-            return p;
+            return { ...p, isConnected: true, link: platformLink };
           }));
         }
       } catch (err) {
@@ -1053,83 +1098,95 @@ export default function PublicProfilePage() {
               <h2 className="text-lg font-bold text-black dark:text-white">Platforms Overview</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {platformsData.map((platform, idx) => (
-                <div key={idx} className="bg-gray-50 dark:bg-[#0A0A0C] border border-gray-200 dark:border-white/5 rounded-3xl p-6 flex flex-col hover:border-gray-300 dark:hover:border-white/10 transition-all group">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/5 flex items-center justify-center shrink-0">
-                        {platform.name === 'GitHub' ? <Github size={20} className="text-black dark:text-white" /> : <Code2 size={20} className={platform.iconColor} />}
+            {platformsData.filter((p: any) => p.isConnected).length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 dark:bg-[#0A0A0C] border border-gray-200 dark:border-white/5 rounded-3xl">
+                <Code2 size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                <h3 className="text-lg font-bold text-black dark:text-white mb-2">No Platforms Connected</h3>
+                <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                  {isOwnProfile 
+                    ? "You haven't connected any competitive programming platforms yet. Go to your Dashboard settings to link your accounts."
+                    : "This user hasn't connected any competitive programming platforms yet."}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {platformsData.filter((p: any) => p.isConnected).map((platform, idx) => (
+                  <div key={idx} className="bg-gray-50 dark:bg-[#0A0A0C] border border-gray-200 dark:border-white/5 rounded-3xl p-6 flex flex-col hover:border-gray-300 dark:hover:border-white/10 transition-all group">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/5 flex items-center justify-center shrink-0">
+                          {platform.name === 'GitHub' ? <Github size={20} className="text-black dark:text-white" /> : <Code2 size={20} className={platform.iconColor} />}
+                        </div>
+                        <h3 className="font-bold text-black dark:text-white text-lg">{platform.name}</h3>
                       </div>
-                      <h3 className="font-bold text-black dark:text-white text-lg">{platform.name}</h3>
+                      <a href={(platform as any).link || '#'} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-500 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all" title={`Visit ${platform.name}`}>
+                        <ExternalLink size={14} />
+                      </a>
                     </div>
-                    <a href={(platform as any).link || '#'} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-500 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all" title={`Visit ${platform.name}`}>
-                      <ExternalLink size={14} />
-                    </a>
-                  </div>
 
-                  <div className="mb-4">
-                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">{platform.primaryStatLabel}</p>
-                    <p className="text-3xl font-black text-black dark:text-white">{platform.primaryStatValue}</p>
-                  </div>
+                    <div className="mb-4">
+                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">{platform.primaryStatLabel}</p>
+                      <p className="text-3xl font-black text-black dark:text-white">{platform.primaryStatValue}</p>
+                    </div>
 
-                  {/* Difficulty Breakdown */}
-                  {platform.difficulty && (
-                    <div className="flex items-center gap-6 mb-5">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Easy</span>
-                        <span className="text-sm font-black text-emerald-500">{platform.difficulty.easy}</span>
+                    {/* Difficulty Breakdown */}
+                    {platform.difficulty && (
+                      <div className="flex items-center gap-6 mb-5">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Easy</span>
+                          <span className="text-sm font-black text-emerald-500">{platform.difficulty.easy}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Med</span>
+                          <span className="text-sm font-black text-yellow-500">{platform.difficulty.medium}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Hard</span>
+                          <span className="text-sm font-black text-rose-500">{platform.difficulty.hard}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Med</span>
-                        <span className="text-sm font-black text-yellow-500">{platform.difficulty.medium}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Hard</span>
-                        <span className="text-sm font-black text-rose-500">{platform.difficulty.hard}</span>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-y-4 gap-x-2 mb-6">
+                      {platform.stats.map((stat, sIdx) => (
+                        <div key={sIdx}>
+                          <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5">{stat.label}</p>
+                          <p className={`text-sm font-bold ${(stat as any).color || 'text-black dark:text-white'}`}>{stat.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Faux Sparkline Chart */}
+                    <div className="mt-auto pt-4 border-t border-gray-200 dark:border-white/5">
+                      <svg className="w-full h-12 overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
+                        <path
+                          d={`M0,25 C10,20 20,28 30,15 C40,5 50,18 60,10 C70,2 80,12 100,5`}
+                          fill="none"
+                          stroke={platform.chartColor}
+                          strokeWidth="2"
+                          vectorEffect="non-scaling-stroke"
+                          className="opacity-50 group-hover:opacity-100 transition-opacity"
+                        />
+                        <path
+                          d={`M0,25 C10,20 20,28 30,15 C40,5 50,18 60,10 C70,2 80,12 100,5 L100,30 L0,30 Z`}
+                          fill={`url(#gradient-${idx})`}
+                          className="opacity-20 group-hover:opacity-40 transition-opacity"
+                        />
+                        <defs>
+                          <linearGradient id={`gradient-${idx}`} x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stopColor={platform.chartColor} stopOpacity="1" />
+                            <stop offset="100%" stopColor={platform.chartColor} stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="flex justify-between mt-2">
+                        <span className="text-[9px] text-gray-500 uppercase tracking-wider">Top {platform.stats[0]?.value?.replace(/[^0-9.%]/g, '') || '5%'} of users</span>
                       </div>
                     </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-y-4 gap-x-2 mb-6">
-                    {platform.stats.map((stat, sIdx) => (
-                      <div key={sIdx}>
-                        <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5">{stat.label}</p>
-                        <p className={`text-sm font-bold ${(stat as any).color || 'text-black dark:text-white'}`}>{stat.value}</p>
-                      </div>
-                    ))}
                   </div>
-
-                  {/* Faux Sparkline Chart */}
-                  <div className="mt-auto pt-4 border-t border-gray-200 dark:border-white/5">
-                    <svg className="w-full h-12 overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
-                      <path
-                        d={`M0,25 C10,20 20,28 30,15 C40,5 50,18 60,10 C70,2 80,12 100,5`}
-                        fill="none"
-                        stroke={platform.chartColor}
-                        strokeWidth="2"
-                        vectorEffect="non-scaling-stroke"
-                        className="opacity-50 group-hover:opacity-100 transition-opacity"
-                      />
-                      <path
-                        d={`M0,25 C10,20 20,28 30,15 C40,5 50,18 60,10 C70,2 80,12 100,5 L100,30 L0,30 Z`}
-                        fill={`url(#gradient-${idx})`}
-                        className="opacity-20 group-hover:opacity-40 transition-opacity"
-                      />
-                      <defs>
-                        <linearGradient id={`gradient-${idx}`} x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" stopColor={platform.chartColor} stopOpacity="1" />
-                          <stop offset="100%" stopColor={platform.chartColor} stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div className="flex justify-between mt-2">
-                      <span className="text-[9px] text-gray-500 uppercase tracking-wider">Top {platform.stats[0]?.value?.replace(/[^0-9.%]/g, '') || '5%'} of users</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

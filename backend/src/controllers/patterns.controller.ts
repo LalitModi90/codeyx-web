@@ -6,27 +6,62 @@ import { MasterProblem } from '../models/MasterProblem';
 import { UserProgress } from '../models/UserProgress';
 import { ApiResponse } from '../utils/ApiResponse';
 
+// --- In-Memory Cache for Static Pattern Data ---
+let cachedCategories: any = null;
+let cachedPatterns: any = null;
+let cachedPatternProblems: any = null;
+let lastCacheTime = 0;
+const CACHE_TTL = 1000 * 60 * 5; // 5 minutes
+
+async function getCachedReferenceData() {
+  const now = Date.now();
+  if (cachedCategories && cachedPatterns && cachedPatternProblems && (now - lastCacheTime < CACHE_TTL)) {
+    return [cachedCategories, cachedPatterns, cachedPatternProblems];
+  }
+  const [cats, pats, pProbs] = await Promise.all([
+    PatternCategory.find({ active: true }).select('title description icon order').sort({ order: 1 }).lean(),
+    Pattern.find({ active: true }).select('categoryId title description difficulty order').sort({ order: 1 }).lean(),
+    PatternProblem.find({}).select('patternId masterProblemId').lean()
+  ]);
+  cachedCategories = cats;
+  cachedPatterns = pats;
+  cachedPatternProblems = pProbs;
+  lastCacheTime = now;
+  return [cats, pats, pProbs];
+}
+
 // ---------------------------------------------------------------------------
 // GET /api/patterns/categories
 // Returns all categories with their patterns (no progress)
 // ---------------------------------------------------------------------------
 export const getAllCategories = async (req: Request, res: Response) => {
   try {
-    const categories = await PatternCategory.find({ active: true })
-      .sort({ order: 1 })
-      .lean();
+    const [categories, patterns, patternProblems] = await getCachedReferenceData();
+
+    const problemsByPattern = new Map<string, number>();
+    for (const pp of patternProblems) {
+      const patIdStr = pp.patternId.toString();
+      problemsByPattern.set(patIdStr, (problemsByPattern.get(patIdStr) || 0) + 1);
+    }
+
+    const patternsByCategory = new Map<string, any[]>();
+    for (const pat of patterns) {
+      const catIdStr = pat.categoryId.toString();
+      if (!patternsByCategory.has(catIdStr)) {
+        patternsByCategory.set(catIdStr, []);
+      }
+      patternsByCategory.get(catIdStr)!.push(pat);
+    }
 
     const data = [];
     for (const cat of categories) {
-      const patterns = await Pattern.find({ categoryId: cat._id, active: true })
-        .sort({ order: 1 })
-        .lean();
+      const catPatterns = patternsByCategory.get(cat._id.toString()) || [];
 
       const patternsWithCounts = [];
       let categoryTotal = 0;
 
-      for (const pat of patterns) {
-        const count = await PatternProblem.countDocuments({ patternId: pat._id });
+      for (const pat of catPatterns) {
+        const count = problemsByPattern.get(pat._id.toString()) || 0;
         categoryTotal += count;
         patternsWithCounts.push({
           _id: pat._id,
@@ -67,33 +102,50 @@ export const getCategoriesWithProgress = async (req: Request, res: Response) => 
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const categories = await PatternCategory.find({ active: true })
-      .sort({ order: 1 })
-      .lean();
+    const [categories, patterns, patternProblems] = await getCachedReferenceData();
+
+    const problemsByPattern = new Map<string, number[]>();
+    const allMpIds: number[] = [];
+    for (const pp of patternProblems) {
+      const patIdStr = pp.patternId.toString();
+      if (!problemsByPattern.has(patIdStr)) {
+        problemsByPattern.set(patIdStr, []);
+      }
+      problemsByPattern.get(patIdStr)!.push(pp.masterProblemId);
+      allMpIds.push(pp.masterProblemId);
+    }
+
+    const patternsByCategory = new Map<string, any[]>();
+    for (const pat of patterns) {
+      const catIdStr = pat.categoryId.toString();
+      if (!patternsByCategory.has(catIdStr)) {
+        patternsByCategory.set(catIdStr, []);
+      }
+      patternsByCategory.get(catIdStr)!.push(pat);
+    }
+
+    const solvedProgress = await UserProgress.find({
+      userId,
+      solved: true,
+    }).select('problemId').lean();
+
+    const solvedSet = new Set(solvedProgress.map(up => up.problemId));
 
     const data = [];
     for (const cat of categories) {
-      const patterns = await Pattern.find({ categoryId: cat._id, active: true })
-        .sort({ order: 1 })
-        .lean();
+      const catPatterns = patternsByCategory.get(cat._id.toString()) || [];
 
       const patternsWithProgress = [];
       let categorySolved = 0;
       let categoryTotal = 0;
 
-      for (const pat of patterns) {
-        const patternProblems = await PatternProblem.find({ patternId: pat._id }).lean();
-        const mpIds = patternProblems.map(pp => pp.masterProblemId);
+      for (const pat of catPatterns) {
+        const mpIds = problemsByPattern.get(pat._id.toString()) || [];
         const total = mpIds.length;
 
         let solved = 0;
         if (total > 0) {
-          const solvedCount = await UserProgress.countDocuments({
-            userId,
-            problemId: { $in: mpIds },
-            solved: true,
-          });
-          solved = solvedCount;
+          solved = mpIds.filter((id: number) => solvedSet.has(id)).length;
         }
 
         categorySolved += solved;
@@ -282,7 +334,32 @@ export const getPatternStats = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const categories = await PatternCategory.find({ active: true }).sort({ order: 1 }).lean();
+    const [categories, patterns, patternProblems] = await getCachedReferenceData();
+
+    const problemsByPattern = new Map<string, number[]>();
+    for (const pp of patternProblems) {
+      const patIdStr = pp.patternId.toString();
+      if (!problemsByPattern.has(patIdStr)) {
+        problemsByPattern.set(patIdStr, []);
+      }
+      problemsByPattern.get(patIdStr)!.push(pp.masterProblemId);
+    }
+
+    const patternsByCategory = new Map<string, any[]>();
+    for (const pat of patterns) {
+      const catIdStr = pat.categoryId.toString();
+      if (!patternsByCategory.has(catIdStr)) {
+        patternsByCategory.set(catIdStr, []);
+      }
+      patternsByCategory.get(catIdStr)!.push(pat);
+    }
+
+    const solvedProgress = await UserProgress.find({
+      userId,
+      solved: true,
+    }).select('problemId').lean();
+
+    const solvedSet = new Set(solvedProgress.map(up => up.problemId));
 
     const categoryStats = [];
     let totalSolved = 0;
@@ -291,13 +368,12 @@ export const getPatternStats = async (req: Request, res: Response) => {
     const weakPatterns: Array<{ title: string; solved: number; total: number; percentage: number }> = [];
 
     for (const cat of categories) {
-      const patterns = await Pattern.find({ categoryId: cat._id, active: true }).lean();
+      const catPatterns = patternsByCategory.get(cat._id.toString()) || [];
       let catSolved = 0;
       let catTotal = 0;
 
-      for (const pat of patterns) {
-        const patternProblems = await PatternProblem.find({ patternId: pat._id }).lean();
-        const mpIds = patternProblems.map(pp => pp.masterProblemId);
+      for (const pat of catPatterns) {
+        const mpIds = problemsByPattern.get(pat._id.toString()) || [];
         const total = mpIds.length;
         catTotal += total;
 
@@ -308,11 +384,7 @@ export const getPatternStats = async (req: Request, res: Response) => {
 
         let solved = 0;
         if (total > 0) {
-          solved = await UserProgress.countDocuments({
-            userId,
-            problemId: { $in: mpIds },
-            solved: true,
-          });
+          solved = mpIds.filter((id: number) => solvedSet.has(id)).length;
           difficultyBreakdown[pat.difficulty].solved += solved;
         }
         catSolved += solved;
@@ -365,18 +437,10 @@ export const getPatternAnalytics = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    const [
-      categories,
-      allPatterns,
-      allPatternProblems,
-      userProgress,
-      masterProblems,
-    ] = await Promise.all([
-      PatternCategory.find({ active: true }).sort({ order: 1 }).lean(),
-      Pattern.find({ active: true }).sort({ order: 1 }).lean(),
-      PatternProblem.find({}).lean(),
+    const [categories, allPatterns, allPatternProblems] = await getCachedReferenceData();
+    const [userProgress, masterProblems] = await Promise.all([
       UserProgress.find({ userId, solved: true }).select('problemId solvedAt').lean(),
-      MasterProblem.find({ active: true }).lean(),
+      MasterProblem.find({ active: true }).select('problemId title difficulty').lean(),
     ]);
 
     const mpMap = new Map<number, typeof masterProblems[0]>();

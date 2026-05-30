@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { ApiResponse } from '../utils/ApiResponse';
 import { PlatformStats } from '../models/platformStats.model';
 import { FallbackManager } from '../services/fallbackManager';
+import * as fs from 'fs';
 
 // Direct sync using the high-resilience FallbackManager (bypasses Cloudflare & implements multi-tier fallback)
 export const triggerPlatformSync = async (req: Request, res: Response) => {
@@ -69,8 +70,8 @@ export const triggerPlatformSync = async (req: Request, res: Response) => {
       name:            extra.name              || profile.username,
       avatar:          avatarUrl,
       contests:        profile.contests        || 0,         // count
-      contestsHistory: Array.isArray(extra.contests) ? extra.contests : [],  // full array
-      heatmap:         Array.isArray(extra.heatmap)  ? extra.heatmap  : [],
+      contestsHistory: Array.isArray(metadata.contests) ? metadata.contests : (Array.isArray(extra.contests) ? extra.contests : []),  // full array
+      heatmap:         Array.isArray(metadata.heatmap) ? metadata.heatmap : (Array.isArray(extra.heatmap)  ? extra.heatmap  : []),
       partiallySolved: extra.partiallySolved   || 0,
       fullySolved:     extra.fullySolved       || 0,
       followers:       profile.followers       || 0,
@@ -154,6 +155,11 @@ export const getAllPlatformStats = async (req: Request, res: Response) => {
 
     const stats = await PlatformStats.find({ userId: userId as string });
     
+    // DEBUG: Write stats to disk so I can read it
+    try {
+      fs.writeFileSync('f:/Codeyx/backend/stats_debug.json', JSON.stringify(stats, null, 2));
+    } catch (e) {}
+
     return res.status(200).json(
       new ApiResponse(200, stats, `Fetched all platforms for user`)
     );

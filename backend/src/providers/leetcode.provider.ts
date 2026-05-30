@@ -109,6 +109,10 @@ export class LeetCodeProvider implements IProfileProvider {
 
     const topics = [...advanced, ...intermediate, ...fundamental];
 
+    if (solved > 0 && topics.length === 0) {
+      throw new Error('GraphQL returned incomplete data for topics. Forcing backup mirror...');
+    }
+
     const submissions = (data.recentSubmissionList || []).map((s: any) => {
       const displayLang = s.lang ? (s.lang.charAt(0).toUpperCase() + s.lang.slice(1)) : 'Java';
       return {
@@ -178,8 +182,8 @@ export class LeetCodeProvider implements IProfileProvider {
   async fetchBackup(username: string): Promise<any> {
     const mirrors = [
       `https://leetcode-api-faisal.vercel.app/${username}`,
-      `https://leetcode-stats-api.herokuapp.com/${username}`,
-      `https://alfa-leetcode-api.onrender.com/${username}`
+      `https://alfa-leetcode-api.onrender.com/${username}`,
+      `https://leetcode-stats-api.herokuapp.com/${username}`
     ];
 
     let user: any = null;
@@ -188,7 +192,7 @@ export class LeetCodeProvider implements IProfileProvider {
     for (const url of mirrors) {
       try {
         console.log(`[LeetCode Backup] Querying mirror: ${url}...`);
-        const response = await axios.get(url, { timeout: 6000 });
+        const response = await axios.get(url, { timeout: 15000 });
         if (response.data && !response.data.errors && !response.data.error && response.data.status !== 'error') {
           user = response.data;
           successMirror = url;
@@ -210,60 +214,75 @@ export class LeetCodeProvider implements IProfileProvider {
     const hard = user.hardSolved || user.hard || 0;
     const ranking = user.ranking || user.globalRanking || 0;
     const reputation = user.reputation || user.contributionPoints || 0;
-    const rating = Math.round(user.contestRating || 0);
+    let rating = Math.round(user.contestRating || 0);
 
-    let topics: any[] = [];
-    if (successMirror.includes('onrender.com')) {
+    let badges = user.badges?.map((b: any) => b.displayName || b.name) || [];
+
+    // Try Alfa API to fetch badges if not found in main profile
+    if (badges.length === 0) {
       try {
-        const skillUrl = `https://alfa-leetcode-api.onrender.com/${username}/skill`;
-        const skillRes = await axios.get(skillUrl, { timeout: 5000 });
-        const tagProblemCounts = skillRes.data?.tagProblemCounts || skillRes.data?.data?.tagProblemCounts;
-        if (tagProblemCounts) {
-          const advanced = (tagProblemCounts.advanced || []).map((t: any) => ({
-            tagName: t.tagName,
-            problemsSolved: t.problemsSolved,
-            count: t.problemsSolved,
-            name: t.tagName,
-            category: 'Advanced'
-          }));
-          const intermediate = (tagProblemCounts.intermediate || []).map((t: any) => ({
-            tagName: t.tagName,
-            problemsSolved: t.problemsSolved,
-            count: t.problemsSolved,
-            name: t.tagName,
-            category: 'Intermediate'
-          }));
-          const fundamental = (tagProblemCounts.fundamental || []).map((t: any) => ({
-            tagName: t.tagName,
-            problemsSolved: t.problemsSolved,
-            count: t.problemsSolved,
-            name: t.tagName,
-            category: 'Fundamental'
-          }));
-          topics = [...advanced, ...intermediate, ...fundamental];
-        }
+        const badgesUrl = `https://alfa-leetcode-api.onrender.com/${username}/badges`;
+        const badgesRes = await axios.get(badgesUrl, { timeout: 15000 });
+        const badgesList = badgesRes.data?.badges || badgesRes.data?.badgesCount || [];
+        badges = badgesList.map((b: any) => b.displayName || b.name || b.badgeName);
       } catch (err: any) {
-        console.warn('[LeetCode Backup Skills Error]', err.message);
+        console.warn('[LeetCode Backup Badges Error]', err.message);
       }
     }
 
-    let submissions: any[] = [];
-    if (successMirror.includes('onrender.com')) {
-      try {
-        const subUrl = `https://alfa-leetcode-api.onrender.com/${username}/submission?limit=15`;
-        const subRes = await axios.get(subUrl, { timeout: 5000 });
-        const subList = subRes.data?.submission || subRes.data?.data?.submission || [];
-        submissions = subList.map((s: any) => ({
-          name: s.title,
-          date: s.timestamp ? new Date(parseInt(s.timestamp) * 1000).toLocaleString() : 'Just now',
-          diff: 'N/A',
-          status: s.statusDisplay || 'Accepted',
-          language: s.lang ? (s.lang.charAt(0).toUpperCase() + s.lang.slice(1)) : 'Java',
-          success: s.statusDisplay === 'Accepted'
+    let topics: any[] = [];
+    // Always try to fetch rich data from Alfa regardless of which main mirror succeeded
+    try {
+      const skillUrl = `https://alfa-leetcode-api.onrender.com/${username}/skill`;
+      const skillRes = await axios.get(skillUrl, { timeout: 15000 });
+      const tagProblemCounts = skillRes.data?.tagProblemCounts || skillRes.data?.data?.tagProblemCounts || (skillRes.data?.fundamental ? skillRes.data : null);
+      if (tagProblemCounts) {
+        const advanced = (tagProblemCounts.advanced || []).map((t: any) => ({
+          tagName: t.tagName,
+          problemsSolved: t.problemsSolved,
+          count: t.problemsSolved,
+          name: t.tagName,
+          category: 'Advanced'
         }));
-      } catch (err: any) {
-        console.warn('[LeetCode Backup Submissions Error]', err.message);
+        const intermediate = (tagProblemCounts.intermediate || []).map((t: any) => ({
+          tagName: t.tagName,
+          problemsSolved: t.problemsSolved,
+          count: t.problemsSolved,
+          name: t.tagName,
+          category: 'Intermediate'
+        }));
+        const fundamental = (tagProblemCounts.fundamental || []).map((t: any) => ({
+          tagName: t.tagName,
+          problemsSolved: t.problemsSolved,
+          count: t.problemsSolved,
+          name: t.tagName,
+          category: 'Fundamental'
+        }));
+        topics = [...advanced, ...intermediate, ...fundamental];
       }
+    } catch (err: any) {
+      console.warn('[LeetCode Backup Skill Error]', err.message);
+    }
+
+    let submissions: any[] = [];
+    try {
+      const subUrl = `https://alfa-leetcode-api.onrender.com/${username}/submission?limit=15`;
+      const subRes = await axios.get(subUrl, { timeout: 15000 });
+      let subList = subRes.data?.submission || subRes.data?.data?.submission;
+      if (!subList && Array.isArray(subRes.data)) subList = subRes.data;
+      if (!subList) subList = [];
+      
+      submissions = subList.map((s: any) => ({
+        name: s.title,
+        date: s.timestamp ? new Date(parseInt(s.timestamp) * 1000).toLocaleString() : 'Just now',
+        status: s.statusDisplay || s.status || 'Accepted',
+        language: s.lang || 'Java',
+        memory: s.memory || 'Unknown',
+        runtime: s.runtime || 'Unknown',
+        difficulty: 'Unknown'
+      }));
+    } catch (err: any) {
+      console.warn('[LeetCode Backup Submissions Error]', err.message);
     }
 
     let heatmap: any[] = [];
@@ -284,13 +303,16 @@ export class LeetCodeProvider implements IProfileProvider {
 
     let contestHistory: any[] = [];
     try {
-      const contestUrl = successMirror.includes('onrender.com') 
-        ? `https://alfa-leetcode-api.onrender.com/${username}/contest`
-        : `https://leetcode-api-faisal.vercel.app/${username}/contest`;
+      const contestUrl = `https://alfa-leetcode-api.onrender.com/${username}/contest`;
         
       console.log(`[LeetCode Backup] Fetching contest history from ${contestUrl}...`);
-      const contestRes = await axios.get(contestUrl, { timeout: 6000 });
+      const contestRes = await axios.get(contestUrl, { timeout: 15000 }); // Render can be slow
       const contestData = contestRes.data || {};
+      
+      if (contestData.contestRating) {
+        rating = Math.round(contestData.contestRating);
+      }
+      
       const participation = contestData.contestParticipation || contestData.data?.contestParticipation || [];
       
       contestHistory = participation
@@ -316,7 +338,7 @@ export class LeetCodeProvider implements IProfileProvider {
       avatar: user.avatar || '',
       metadata: {
         contests: contestHistory,
-        badges: user.badges?.map((b: any) => b.displayName) || [],
+        badges: badges,
         streak,
         topics,
         submissions,

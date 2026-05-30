@@ -127,7 +127,7 @@ export default function LeetCodePage() {
     ? parseInt(String(lcData.stats.globalRank).replace(/[^0-9]/g, '')) || 0 
     : 0;
 
-  const historyFromStats = lcData?.stats?.metadata?.contests || lcData?.stats?.contests || [];
+  const historyFromStats = lcData?.stats?.metadata?.contests || lcData?.stats?.contestsHistory || (Array.isArray(lcData?.stats?.contests) ? lcData.stats.contests : []);
   const lastContestRating = Array.isArray(historyFromStats) && historyFromStats.length > 0
     ? historyFromStats[historyFromStats.length - 1]?.rating || 0
     : 0;
@@ -222,7 +222,7 @@ export default function LeetCodePage() {
   );
 
   // Extract contest rank with robust fallbacks
-  const contestHistory = lcData?.stats?.metadata?.contests || lcData?.stats?.contests || [];
+  const contestHistory = lcData?.stats?.metadata?.contests || lcData?.stats?.contestsHistory || (Array.isArray(lcData?.stats?.contests) ? lcData.stats.contests : []);
   const lastContestRank = Array.isArray(contestHistory) && contestHistory.length > 0
     ? contestHistory[contestHistory.length - 1]?.rank || 0
     : 0;
@@ -371,17 +371,17 @@ export default function LeetCodePage() {
                     <ContestAnalytics 
                       currentRating={resolvedRating}
                       topPercent={topPercent}
-                      contestsAttended={Array.isArray(lcData?.stats?.contests) ? lcData.stats.contests.length : (lcData?.stats?.contests || 0)}
+                      contestsAttended={Array.isArray(historyFromStats) ? historyFromStats.length : (lcData?.stats?.contests || 0)}
                       globalContestRank={globalContestRank}
                       globalProfileRank={profileRankNum}
                       ratingHistory={
-                        Array.isArray(lcData?.stats?.contests) && lcData.stats.contests.length > 0 
-                          ? (lcData.stats.contests.length === 1 
+                        Array.isArray(historyFromStats) && historyFromStats.length > 0 
+                          ? (historyFromStats.length === 1 
                               ? [
                                   { contestName: "Start", rating: 1500, rank: 0, ratingChange: 0 },
-                                  ...lcData.stats.contests
+                                  ...historyFromStats
                                 ]
-                              : lcData.stats.contests)
+                              : historyFromStats)
                           : resolvedRating 
                             ? [
                                 { contestName: "Start", rating: 1500, rank: 0, ratingChange: 0 },
@@ -454,17 +454,17 @@ export default function LeetCodePage() {
                     <ContestAnalytics 
                       currentRating={resolvedRating}
                       topPercent={topPercent}
-                      contestsAttended={Array.isArray(lcData?.stats?.contests) ? lcData.stats.contests.length : (lcData?.stats?.contests || 0)}
+                      contestsAttended={Array.isArray(historyFromStats) ? historyFromStats.length : (lcData?.stats?.contests || 0)}
                       globalContestRank={globalContestRank}
                       globalProfileRank={profileRankNum}
                       ratingHistory={
-                        Array.isArray(lcData?.stats?.contests) && lcData.stats.contests.length > 0 
-                          ? (lcData.stats.contests.length === 1 
+                        Array.isArray(historyFromStats) && historyFromStats.length > 0 
+                          ? (historyFromStats.length === 1 
                               ? [
                                   { contestName: "Start", rating: 1500, rank: 0, ratingChange: 0 },
-                                  ...lcData.stats.contests
+                                  ...historyFromStats
                                 ]
-                              : lcData.stats.contests)
+                              : historyFromStats)
                           : resolvedRating 
                             ? [
                                 { contestName: "Start", rating: 1500, rank: 0, ratingChange: 0 },
