@@ -166,6 +166,8 @@ export default function TopNavbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const [isScrolling, setIsScrolling] = React.useState(false);
+
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('activeSheets');
@@ -181,15 +183,36 @@ export default function TopNavbar() {
         }
       };
 
+      let isScrollingNow = false;
+      let scrollTimer: NodeJS.Timeout;
+
       const handleScroll = () => {
         setIsScrolled(window.scrollY > 20);
+        
+        if (!isScrollingNow) {
+           isScrollingNow = true;
+           setIsScrolling(true);
+           setShowNotifications(false);
+           
+           // Try to close Clerk UserButton popover by dispatching a mousedown event (simulates click outside)
+           document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+           document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window }));
+           document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        }
+
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+           isScrollingNow = false;
+           setIsScrolling(false);
+        }, 300);
       };
 
       window.addEventListener('workspaceUpdated', handleWorkspaceUpdate);
-      window.addEventListener('scroll', handleScroll);
+      window.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
         window.removeEventListener('workspaceUpdated', handleWorkspaceUpdate);
         window.removeEventListener('scroll', handleScroll);
+        clearTimeout(scrollTimer);
       };
     }
   }, []);
@@ -282,7 +305,7 @@ export default function TopNavbar() {
 
               if (item.isPrivate && !user) {
                 return (
-                  <div key={i} className="relative group/nav py-5">
+                  <div key={i} className={`relative py-5 ${!isScrolling ? 'group/nav' : ''}`}>
                     <Link href="/login">
                       <button className="text-xs font-semibold flex items-center gap-1 transition-all text-gray-400 opacity-50 hover:opacity-100 hover:text-white cursor-pointer">
                         {item.label}
@@ -294,7 +317,7 @@ export default function TopNavbar() {
               }
 
               return (
-                <div key={i} className="relative group/nav py-5">
+                <div key={i} className={`relative py-5 ${!isScrolling ? 'group/nav' : ''}`}>
                   <Link href={item.href || '#'} className={`text-xs font-semibold flex items-center gap-1 transition-all ${isActive ? 'text-[#FF8A00]' : 'text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white'}`}>
                     {item.label}
                     {item.hasDropdown && <ChevronDown size={12} className={`opacity-70 transition-transform ${item.isPlatforms ? 'group-hover/nav:rotate-180' : ''}`} />}

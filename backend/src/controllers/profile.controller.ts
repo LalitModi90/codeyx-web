@@ -26,6 +26,21 @@ export const updateProfile = async (req: Request, res: Response) => {
       await User.findOneAndUpdate({ clerkUserId: userId }, { username: updatedData.username });
     }
 
+    // Process Cloudinary images for courses if they exist
+    if (updatedData.courses && Array.isArray(updatedData.courses)) {
+      const { uploadBase64ToCloudinary } = require('../utils/cloudinary');
+      for (let i = 0; i < updatedData.courses.length; i++) {
+        const course = updatedData.courses[i];
+        if (course.image && course.image.startsWith('data:')) {
+           try {
+             course.image = await uploadBase64ToCloudinary(course.image, userId);
+           } catch (e) {
+             console.error('[Profile Controller] Course image upload failed', e);
+           }
+        }
+      }
+    }
+
     const profile = await Profile.findOneAndUpdate(
       { userId },
       { $set: updatedData },

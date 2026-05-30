@@ -121,14 +121,31 @@ export const clerkWebhookHandler = async (req: Request, res: Response) => {
     }
 
     if (eventType === 'user.updated') {
+      const firstName = evt.data.first_name || '';
+      const lastName = evt.data.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+
       await User.findOneAndUpdate(
         { clerkUserId: id },
         {
-          firstName: evt.data.first_name || '',
-          lastName: evt.data.last_name || '',
+          firstName: firstName,
+          lastName: lastName,
           avatarUrl: evt.data.image_url || '',
         }
       );
+
+      await Profile.findOneAndUpdate(
+        { userId: id },
+        {
+          name: fullName,
+        }
+      );
+
+      // Invalidate profile cache
+      if (redisClient && typeof redisClient.del === 'function') {
+        redisClient.del(`profile:${id}`).catch(() => {});
+      }
+
       // Let active socket connections know profile updated
       emitToUser(id, 'PROFILE_UPDATED', { clerkUserId: id });
     }

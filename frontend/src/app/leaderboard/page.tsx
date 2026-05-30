@@ -163,13 +163,12 @@ export default function LeaderboardPage() {
       filtered.sort((a, b) => b.rating - a.rating);
     } 
     else if (activeLeaderboard === 'Contest Leaderboard') {
-      // Normalize raw rating to 0-100 scale, then add contests
+      // Use the actual raw combined rating directly instead of normalizing it to 100
       filtered = filtered.map(row => {
-        const normalizedRating = Math.min(100, Math.round(((row.rawCombinedRating || 0) / 3000) * 100));
-        return { ...row, calculatedContestScore: normalizedRating + (row.contests || 0) };
+        return { ...row, calculatedContestScore: row.rawCombinedRating || 0 };
       });
 
-      // Sort by Contest Rating (rating + contests) primarily
+      // Sort by Contest Rating primarily
       filtered.sort((a, b) => {
         if (b.calculatedContestScore !== a.calculatedContestScore) {
           return b.calculatedContestScore - a.calculatedContestScore;

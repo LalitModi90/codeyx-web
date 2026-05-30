@@ -270,7 +270,10 @@ export default function PublicProfilePage() {
 
   const [skills, setSkills] = useState<{ name: string; level: string; color: string }[]>([]);
 
-  const achievementsData: any[] = [];
+  const [achievementsList, setAchievementsList] = useState<any[]>([]);
+  const [topLanguagesList, setTopLanguagesList] = useState<{name: string, count: number, percent: number}[]>([]);
+  const [heatmapMap, setHeatmapMap] = useState<Record<string, number>>({});
+  const [recentActivityList, setRecentActivityList] = useState<any[]>([]);
 
   const [courses, setCourses] = useState<{ title: string; author: string; status: string; image: string; link: string }[]>([]);
 
@@ -344,8 +347,12 @@ export default function PublicProfilePage() {
     setProfileLoading(true);
     try {
       // 1. Fetch details from Leaderboard user profile endpoint
-      const leaderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard/user/${targetUserId}`);
+      const [leaderRes, fullLeaderRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard/user/${targetUserId}`),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard`)
+      ]);
       const leaderData = await leaderRes.json();
+      const fullLeaderData = await fullLeaderRes.json();
 
       // 2. Fetch bio details from MERN profile endpoint
       const profileRes = await profileService.getProfile(targetUserId);
@@ -384,6 +391,12 @@ export default function PublicProfilePage() {
         setSkills([]);
       }
 
+      if (pData.courses && Array.isArray(pData.courses)) {
+        setCourses(pData.courses);
+      } else {
+        setCourses([]);
+      }
+
       // 3. Fetch real projects
       let projectsArray: any[] = [];
       try {
@@ -417,16 +430,24 @@ export default function PublicProfilePage() {
 
         setProfile(prev => ({
           ...prev,
-          name: uData.user || prev.name,
+          name: (isOwnProfile && user?.fullName) ? user.fullName : (uData.user || prev.name),
           username: uData.username || prev.username,
         }));
+
+        let realRank = 0;
+        if (fullLeaderData.success && fullLeaderData.data) {
+           const userInLeaderboard = fullLeaderData.data.find((u: any) => u.userId === targetUserId);
+           if (userInLeaderboard) {
+               realRank = userInLeaderboard.rank;
+           }
+        }
 
         setOverallStats({
           problems: uData.problems || 0,
           contests: uData.contests || 0,
           projects: projectsArray ? projectsArray.length : 0,
           points: Math.round((uData.rating || 0) * 10),
-          rank: uData.rank || 2,
+          rank: realRank,
           percentile: uData.winRate ? `Top ${100 - uData.winRate}%` : 'Top 10%'
         });
 
@@ -566,6 +587,98 @@ export default function PublicProfilePage() {
 
             return { ...p, isConnected: true, link: platformLink };
           }));
+
+          // Aggregate heatmap and recent activity
+          const aggHeatmap: Record<string, number> = {};
+          const allRecent: any[] = [];
+          const allAchievements: any[] = [];
+          const langCounts: Record<string, number> = {};
+          
+          pArray.forEach((pData: any) => {
+            const platformId = pData.platform;
+            const stats = pData.stats || {};
+            
+            // Heatmap
+            const hm = stats.heatmap || stats.metadata?.heatmap || [];
+            if (Array.isArray(hm)) {
+              hm.forEach((h: any) => {
+                const d = h.date;
+                if (d) {
+                  aggHeatmap[d] = (aggHeatmap[d] || 0) + (h.count || 1);
+                }
+              });
+            }
+
+            // Submissions & Languages
+            const subs = stats.submissions || stats.metadata?.submissions || [];
+            if (Array.isArray(subs)) {
+              subs.forEach((s: any) => {
+                allRecent.push({
+                  ...s,
+                  platform: platformId,
+                  // Try to parse standard date objects for sorting
+                  timestamp: s.timestamp ? s.timestamp * 1000 : new Date(s.date || s.creationTime || 0).getTime()
+                });
+                
+                // Track language if present and valid
+                if (s.language && typeof s.language === 'string') {
+                  const lang = s.language.toLowerCase();
+                  if (lang !== 'unknown' && lang !== 'n/a' && lang !== '') {
+                    langCounts[lang] = (langCounts[lang] || 0) + 1;
+                  }
+                }
+              });
+            }
+            
+            // Languages (if already provided as an array by the platform)
+            const langs = stats.languages || stats.metadata?.languages || [];
+            if (Array.isArray(langs)) {
+               langs.forEach((l: any) => {
+                  let langName = '';
+                  let langCount = 1;
+
+                  if (typeof l === 'string') {
+                     langName = l.toLowerCase();
+                  } else if (l.name) {
+                     langName = l.name.toLowerCase();
+                     langCount = l.count || 1;
+                  }
+
+                  if (langName && langName !== 'unknown' && langName !== 'n/a' && langName !== '') {
+                     langCounts[langName] = (langCounts[langName] || 0) + langCount;
+                  }
+               });
+            }
+
+            // Achievements / Badges
+            const badges = stats.badges || stats.metadata?.badges || [];
+            if (Array.isArray(badges)) {
+              badges.forEach((b: string) => {
+                allAchievements.push({
+                   title: b,
+                   desc: `Earned on ${platformId}`,
+                   time: 'Recent',
+                   platform: platformId
+                });
+              });
+            }
+          });
+          
+          // Calculate percentages for languages
+          const totalLangs = Object.values(langCounts).reduce((a, b) => a + b, 0);
+          const topLangs = Object.entries(langCounts)
+            .map(([name, count]) => ({
+               name: name.charAt(0).toUpperCase() + name.slice(1),
+               count,
+               percent: totalLangs > 0 ? Math.round((count / totalLangs) * 100) : 0
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 4);
+
+          setHeatmapMap(aggHeatmap);
+          setRecentActivityList(allRecent.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15));
+          setAchievementsList(allAchievements);
+          setTopLanguagesList(topLangs);
         }
       } catch (err) {
         console.error('Error loading dynamic platform stats:', err);
@@ -622,6 +735,33 @@ export default function PublicProfilePage() {
     } catch (err) {
       console.error('Failed to save projects:', err);
       alert('Failed to save projects. Please check your connection or authentication.');
+    }
+  };
+
+  const handleSaveSkills = async () => {
+    try {
+      const skillsArray = skills.map((s: any) => s.name);
+      await profileService.updateProfile({
+        userId: user?.id || '',
+        skills: skillsArray
+      });
+      setIsManagingSkills(false);
+    } catch (err) {
+      console.error('Failed to save skills:', err);
+      alert('Failed to save skills. Please try again.');
+    }
+  };
+
+  const handleSaveCourses = async () => {
+    try {
+      await profileService.updateProfile({
+        userId: user?.id || '',
+        courses: courses
+      });
+      setIsManagingCourses(false);
+    } catch (err) {
+      console.error('Failed to save courses:', err);
+      alert('Failed to save courses. Please try again.');
     }
   };
 
@@ -738,9 +878,12 @@ export default function PublicProfilePage() {
                 <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-black dark:text-white">
                   <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
                 </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-bold uppercase tracking-wider">
-                  <Star size={12} className="fill-current" /> Pro Member
-                </div>
+                {overallStats.rank > 0 && overallStats.rank <= 100 && (
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${overallStats.rank <= 3 ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500' : 'bg-purple-500/10 border border-purple-500/30 text-purple-400'}`}>
+                    <Trophy size={12} className={overallStats.rank <= 3 ? 'fill-amber-500' : 'fill-purple-400'} />
+                    Top 100 (Rank #{overallStats.rank})
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
@@ -934,14 +1077,17 @@ export default function PublicProfilePage() {
                   <button onClick={() => setIsViewingAchievements(true)} className="text-xs font-bold text-orange-500 hover:text-orange-400">View All</button>
                 </div>
 
-                {achievementsData.length === 0 ? (
-                  <div className="text-sm text-gray-500 italic py-4">No achievements earned yet. Keep coding to unlock badges!</div>
+                {achievementsList.length === 0 ? (
+                  <div className="text-sm text-gray-500 italic py-4">
+                    <span className="font-bold text-orange-500 mr-2">Tip:</span>
+                    Keep coding on connected platforms to unlock badges here!
+                  </div>
                 ) : (
                   <div className="flex flex-col gap-4 flex-1">
-                    {achievementsData.slice(0, 4).map((ach, i) => (
+                    {achievementsList.slice(0, 4).map((ach, i) => (
                       <div key={i} className="flex items-center gap-4 group cursor-pointer">
                         <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-[#111115] border border-gray-200 dark:border-white/5 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <ach.icon className={ach.color} size={20} />
+                          <Trophy className="text-yellow-500" size={20} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-bold text-black dark:text-white truncate">{ach.title}</h4>
@@ -1007,15 +1153,36 @@ export default function PublicProfilePage() {
                 )}
               </div>
 
-              {/* Top Languages — coming soon placeholder */}
               <div className="lg:col-span-1 bg-gray-50 dark:bg-[#0A0A0C] border border-gray-200 dark:border-white/5 rounded-3xl p-6 flex flex-col">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg font-bold text-black dark:text-white">Top Languages</h2>
                 </div>
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-6">
-                  <Code2 size={32} className="text-gray-300 dark:text-white/10" />
-                  <p className="text-sm text-gray-500 italic">Language stats will appear once platforms are connected & synced.</p>
-                </div>
+                {topLanguagesList.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center py-6">
+                    <Code2 size={32} className="text-gray-300 dark:text-white/10" />
+                    <p className="text-sm text-gray-500 italic">
+                      <span className="font-bold text-orange-500 block mb-1">Tip</span>
+                      Connect more platforms or submit code to see language stats!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col gap-4">
+                    {topLanguagesList.map((lang, i) => (
+                      <div key={i} className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-bold text-black dark:text-white">{lang.name}</span>
+                          <span className="font-medium text-gray-500">{lang.percent}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-gray-200 dark:bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-orange-500 rounded-full transition-all duration-1000" 
+                            style={{ width: `${lang.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1209,34 +1376,67 @@ export default function PublicProfilePage() {
                     <span className="h-[14px] leading-[14px]"></span>
                   </div>
 
-                  {/* Months & Grid */}
-                  {[
-                    { name: 'Jan', weeks: 4 }, { name: 'Feb', weeks: 4 }, { name: 'Mar', weeks: 5 },
-                    { name: 'Apr', weeks: 4 }, { name: 'May', weeks: 4 }, { name: 'Jun', weeks: 5 },
-                    { name: 'Jul', weeks: 4 }, { name: 'Aug', weeks: 5 }, { name: 'Sep', weeks: 4 },
-                    { name: 'Oct', weeks: 4 }, { name: 'Nov', weeks: 5 }, { name: 'Dec', weeks: 4 },
-                  ].map((month, mIdx) => (
-                    <div key={mIdx} className="flex flex-col gap-1">
-                      <div className="flex gap-1">
-                        {Array.from({ length: month.weeks }).map((_, weekIdx) => (
-                          <div key={weekIdx} className="flex flex-col gap-1">
-                            {Array.from({ length: 7 }).map((_, dayIdx) => {
-                              // Create jagged edges for realism
-                              const isHidden = (weekIdx === 0 && dayIdx < Math.floor(Math.random() * 4)) ||
-                                (weekIdx === month.weeks - 1 && dayIdx > 2 + Math.floor(Math.random() * 4));
-                              if (isHidden) {
-                                return <div key={dayIdx} className="w-[14px] h-[14px]" />;
-                              }
-                              const intensity = Math.random();
-                              const bg = intensity > 0.85 ? 'bg-green-600 dark:bg-green-500' : intensity > 0.6 ? 'bg-green-500 dark:bg-green-600' : intensity > 0.3 ? 'bg-green-300 dark:bg-green-800' : 'bg-gray-200 dark:bg-white/5';
-                              return <div key={dayIdx} className={`w-[14px] h-[14px] rounded-[3px] ${bg} hover:ring-1 hover:ring-black dark:hover:ring-white transition-all`} title={`${Math.floor(intensity * 10)} contributions`} />;
-                            })}
-                          </div>
-                        ))}
+                  {/* Real Dynamic Heatmap based on the last 364 days */}
+                  {(() => {
+                    const today = new Date();
+                    // Generate 52 weeks of 7 days = 364 days ending on today
+                    const days = [];
+                    for (let i = 363; i >= 0; i--) {
+                      const d = new Date(today);
+                      d.setDate(d.getDate() - i);
+                      days.push(d);
+                    }
+                    
+                    const weeks = [];
+                    for (let i = 0; i < 52; i++) {
+                      weeks.push(days.slice(i * 7, i * 7 + 7));
+                    }
+                    
+                    // Group weeks by month for the labels
+                    const months: { month: number, name: string, weekStart: number, span: number }[] = [];
+                    let currentMonth = -1;
+                    weeks.forEach((week, wIdx) => {
+                       const monthOfFirstDay = week[0].getMonth();
+                       if (monthOfFirstDay !== currentMonth) {
+                          months.push({ month: monthOfFirstDay, name: week[0].toLocaleString('default', { month: 'short' }), weekStart: wIdx, span: 1 });
+                          currentMonth = monthOfFirstDay;
+                       } else {
+                          months[months.length - 1].span += 1;
+                       }
+                    });
+
+                    return (
+                      <div className="flex gap-1 pb-6">
+                         {weeks.map((week, weekIdx) => (
+                           <div key={weekIdx} className="flex flex-col gap-1 relative">
+                             {/* Month Label */}
+                             {months.find(m => m.weekStart === weekIdx) && (
+                               <span className="absolute -bottom-5 text-[10px] text-gray-600 dark:text-gray-400 font-bold whitespace-nowrap">
+                                 {months.find(m => m.weekStart === weekIdx)?.name}
+                               </span>
+                             )}
+                             {week.map((day, dayIdx) => {
+                               // Calculate YYYY-MM-DD using local time
+                               const year = day.getFullYear();
+                               const month = String(day.getMonth() + 1).padStart(2, '0');
+                               const date = String(day.getDate()).padStart(2, '0');
+                               const dateStr = `${year}-${month}-${date}`;
+                               
+                               const count = heatmapMap[dateStr] || 0;
+                               
+                               let bg = 'bg-gray-200 dark:bg-white/5';
+                               if (count > 0) {
+                                  bg = count > 5 ? 'bg-green-600 dark:bg-green-500' : count > 2 ? 'bg-green-500 dark:bg-green-600' : 'bg-green-300 dark:bg-green-800';
+                               }
+                               return (
+                                 <div key={dayIdx} className={`w-[14px] h-[14px] rounded-[3px] ${bg} hover:ring-1 hover:ring-black dark:hover:ring-white transition-all cursor-pointer`} title={`${count} contributions on ${dateStr}`} />
+                               );
+                             })}
+                           </div>
+                         ))}
                       </div>
-                      <span className="text-[10px] text-gray-600 dark:text-gray-400 font-bold mt-1">{month.name}</span>
-                    </div>
-                  ))}
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -1253,9 +1453,28 @@ export default function PublicProfilePage() {
             {/* Recent Activity List */}
             <div className="bg-gray-50 dark:bg-[#0A0A0C] border border-gray-200 dark:border-white/5 rounded-3xl p-6">
               <h2 className="text-lg font-bold text-black dark:text-white mb-6">Recent Activity</h2>
-              <div className="text-sm text-gray-500 italic py-4 text-center">
-                No recent activity to show. Start solving problems on connected platforms!
-              </div>
+              {recentActivityList.length === 0 ? (
+                <div className="text-sm text-gray-500 italic py-4 text-center">
+                  No recent activity to show. Start solving problems on connected platforms!
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {recentActivityList.map((act, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl transition-colors hover:border-gray-200 dark:hover:border-white/10">
+                      <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-[#111115] flex items-center justify-center text-sm font-black capitalize text-gray-700 dark:text-white shrink-0 shadow-sm border border-gray-200 dark:border-white/5">
+                        {act.platform?.slice(0, 1) || 'C'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-black dark:text-white truncate">{act.title || act.name || 'Solved Problem'}</p>
+                        <p className="text-[11px] text-gray-500 font-medium capitalize mt-0.5">{act.platform} • {new Date(act.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      </div>
+                      <div className="text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-500/10 dark:bg-green-500/20 px-2.5 py-1 rounded-md shrink-0 uppercase tracking-wide border border-green-500/20">
+                        {act.status || 'Solved'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1700,7 +1919,7 @@ export default function PublicProfilePage() {
               </div>
 
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#151518]">
-                <button onClick={() => setIsManagingSkills(false)} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-black dark:text-white text-sm font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all">
+                <button onClick={handleSaveSkills} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-black dark:text-white text-sm font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all">
                   <Check size={16} /> Done
                 </button>
               </div>
@@ -1955,7 +2174,7 @@ export default function PublicProfilePage() {
               </div>
 
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#151518]">
-                <button onClick={() => setIsManagingCourses(false)} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-black dark:text-white text-sm font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all">
+                <button onClick={handleSaveCourses} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-black dark:text-white text-sm font-bold shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all">
                   <Check size={16} /> Done
                 </button>
               </div>

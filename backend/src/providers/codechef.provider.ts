@@ -396,7 +396,7 @@ export class CodeChefProvider implements IProfileProvider {
         difficulty: category === 'Fundamental' ? 'Easy' : category === 'Intermediate' ? 'Medium' : 'Hard',
         diff: category === 'Fundamental' ? 'Easy' : category === 'Intermediate' ? 'Medium' : 'Hard',
         status: 'Accepted',
-        language: 'C++20',
+        language: 'Unknown',
         runtime: '0.08s',
         executionTime: '0.08s',
         memory: '312KB',
@@ -414,11 +414,7 @@ export class CodeChefProvider implements IProfileProvider {
       count: t.count
     }));
 
-    const languages = [
-      { language: 'C++', count: Math.ceil(totalSolved * 0.75), percentage: 75 },
-      { language: 'Python', count: Math.floor(totalSolved * 0.20), percentage: 20 },
-      { language: 'Java', count: Math.floor(totalSolved * 0.05), percentage: 5 }
-    ].filter(l => l.count > 0);
+    const languages: any[] = [];
 
     return {
       username,

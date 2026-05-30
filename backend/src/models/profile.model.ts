@@ -28,6 +28,13 @@ export interface IProfile extends Document {
     showProjects: boolean;
     showSkills: boolean;
   };
+  courses: {
+    title: string;
+    author: string;
+    status: string;
+    image: string;
+    link: string;
+  }[];
 }
 
 const profileSchema = new Schema<IProfile>(
@@ -58,6 +65,18 @@ const profileSchema = new Schema<IProfile>(
       isPublic: { type: Boolean, default: true },
       showProjects: { type: Boolean, default: true },
       showSkills: { type: Boolean, default: true },
+    },
+    courses: {
+      type: [
+        {
+          title: { type: String, default: '' },
+          author: { type: String, default: '' },
+          status: { type: String, default: 'In Progress' },
+          image: { type: String, default: '' },
+          link: { type: String, default: '' },
+        }
+      ],
+      default: []
     },
   },
   { timestamps: true }
