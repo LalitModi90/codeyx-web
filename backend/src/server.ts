@@ -33,6 +33,9 @@ import aggregationRoutes from './routes/aggregation.routes';
 import swaggerRoutes from './config/swagger';
 import universityRoutes from './routes/university.routes';
 import suggestionRoutes from './routes/suggestion.routes';
+import adminRoutes from './routes/admin.routes';
+import notificationRoutes from './routes/notification.routes';
+import feedbackRoutes from './routes/feedback.routes';
 import { startCronJobs } from './cron';
 import { setupWorkers } from './queues/sync.worker';
 import { setupCleanupWorker } from './queues/cleanup.worker';
@@ -184,6 +187,9 @@ app.use('/api/activity', activityRoutes);
 app.use('/api', aggregationRoutes);
 app.use('/api/universities', universityRoutes);
 app.use('/api/suggestions', suggestionRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api', swaggerRoutes);
 
 // Centralized Error Handling Middleware

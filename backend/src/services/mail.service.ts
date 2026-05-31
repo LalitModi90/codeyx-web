@@ -135,3 +135,48 @@ export const sendAdminAlertEmail = async (subject: string, messageHtml: string) 
     return null;
   }
 };
+
+export const sendSystemNotificationEmail = async (emails: string[], title: string, message: string, type: string) => {
+  try {
+    if (!emails || emails.length === 0) return;
+
+    let color = '#3b82f6'; // info (blue)
+    if (type === 'success') color = '#10b981'; // green
+    if (type === 'urgent') color = '#ef4444'; // red
+    if (type === 'soon') color = '#f97316'; // orange
+
+    const htmlTemplate = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background-color: #050816; color: #ffffff; padding: 30px; border-radius: 10px; border: 1px solid #333;">
+        <h2 style="color: ${color}; text-align: center; margin-bottom: 20px;">Codeyx Alert: ${title}</h2>
+        
+        <div style="background-color: #101014; padding: 20px; border-radius: 8px; border: 1px solid #333; margin: 25px 0; font-size: 16px; color: #e5e7eb; line-height: 1.6; white-space: pre-wrap;">
+          ${message}
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" style="background-color: ${color}; color: #ffffff; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 6px; display: inline-block;">
+            Open Codeyx
+          </a>
+        </div>
+
+        <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 40px;">
+          © 2026 Codeyx Platform. You are receiving this because you are a registered user.
+        </p>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: `"Codeyx System" <${process.env.EMAIL_USER}>`,
+      bcc: emails, // Use bcc to hide emails from each other
+      subject: `Codeyx: ${title}`,
+      html: htmlTemplate,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[System Notification] Email broadcast sent to ${emails.length} users`);
+    return info;
+  } catch (error) {
+    console.error('Error sending system notification email:', error);
+    return null;
+  }
+};

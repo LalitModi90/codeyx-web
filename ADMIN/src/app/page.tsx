@@ -18,29 +18,31 @@ export default function AdminDashboardPage() {
     users: 0,
     projects: 0,
     sheets: 0,
-    contests: 4 // Hardcoded for now until contest sync is verified
+    contests: 4
   });
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
       const [usersRes, projectsRes, sheetsRes] = await Promise.all([
-        fetch("http://localhost:5005/api/leaderboard").then(r => r.json().catch(() => ({}))),
+        fetch("http://localhost:5005/api/leaderboard?all=true").then(r => r.json().catch(() => ({}))),
         fetch("http://localhost:5005/api/projects/public/all/explore").then(r => r.json().catch(() => ({}))),
         fetch("http://localhost:5005/api/sheets").then(r => r.json().catch(() => ({})))
       ]);
 
-      const usersCount = usersRes?.data?.leaderboard?.length || 0;
+      const usersCount = usersRes?.data?.length || 0;
       const projectsCount = projectsRes?.data?.length || 0;
       const sheetsCount = sheetsRes?.data?.length || 0;
 
       setStats(prev => ({ ...prev, users: usersCount, projects: projectsCount, sheets: sheetsCount }));
       
       // Use leaderboard data for recent users as a fallback
-      if (usersRes?.data?.leaderboard) {
-        setRecentUsers(usersRes.data.leaderboard.slice(0, 4));
+      if (usersRes?.data && Array.isArray(usersRes.data)) {
+        setRecentUsers(usersRes.data.slice(0, 4));
       }
 
     } catch (error) {
@@ -53,6 +55,24 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  const handleForceSync = async () => {
+    setIsSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('http://localhost:5005/api/admin/force-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      setSyncResult(data.message || 'Sync started!');
+      setTimeout(() => setSyncResult(null), 5000);
+    } catch (e) {
+      setSyncResult('Failed to start sync');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const statCards = [
     { title: "Total Users", value: stats.users, change: "+12%", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -68,13 +88,28 @@ export default function AdminDashboardPage() {
           <h1 className="text-3xl font-bold text-foreground">Overview</h1>
           <p className="text-muted-foreground mt-1">Welcome to the Codeyx Admin Control Panel.</p>
         </div>
-        <button 
-          onClick={fetchDashboardData}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md font-medium transition-colors shadow-sm flex items-center gap-2"
-        >
-          {isLoading ? <RefreshCw size={18} className="animate-spin" /> : <Activity size={18} />}
-          <span>{isLoading ? "Syncing..." : "System Status"}</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {syncResult && (
+            <span className="text-xs font-semibold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg">
+              ✅ {syncResult}
+            </span>
+          )}
+          <button
+            onClick={handleForceSync}
+            disabled={isSyncing}
+            className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white px-4 py-2 rounded-md font-medium transition-colors shadow-sm flex items-center gap-2"
+          >
+            <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+            <span>{isSyncing ? 'Syncing...' : 'Force Sync All'}</span>
+          </button>
+          <button
+            onClick={fetchDashboardData}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md font-medium transition-colors shadow-sm flex items-center gap-2"
+          >
+            {isLoading ? <Activity size={18} className="animate-pulse" /> : <Activity size={18} />}
+            <span>System Status</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -134,14 +169,14 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-3">
                         <img src={user.avatarUrl || '/default-avatar.png'} alt="" className="w-8 h-8 rounded-full border border-border" />
                         <div className="flex flex-col">
-                          <span className="font-medium text-foreground">{user.fullName || 'Anonymous'}</span>
+                          <span className="font-medium text-foreground">{user.user || 'Anonymous'}</span>
                           <span className="text-xs text-muted-foreground">@{user.username}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-foreground font-bold">{user.codeyxScore}</td>
+                    <td className="px-6 py-4 text-foreground font-bold">{user.rating || 0}</td>
                     <td className="px-6 py-4 text-muted-foreground">
-                      {user.externalPlatforms?.join(', ') || 'None'}
+                      {Object.keys(user.platformBreakdown || {}).filter(p => p !== 'codeyx').join(', ') || 'None'}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${

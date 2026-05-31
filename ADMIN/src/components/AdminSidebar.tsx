@@ -14,20 +14,22 @@ import {
   Settings,
   GraduationCap,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const sidebarLinks = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Users", href: "/users", icon: Users },
-  { name: "Universities", href: "/universities", icon: GraduationCap },
-  { name: "DSA Sheets", href: "/sheets", icon: BookOpen },
-  { name: "Projects", href: "/projects", icon: Briefcase },
-  { name: "Contests", href: "/contests", icon: Trophy },
-  { name: "Suggestions", href: "/suggestions", icon: MessageSquare },
-  { name: "Announcements", href: "/announcements", icon: Bell },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Dashboard",         href: "/",                  icon: LayoutDashboard },
+  { name: "Users",             href: "/users",             icon: Users },
+  { name: "Universities",      href: "/universities",      icon: GraduationCap },
+  { name: "DSA Sheets",        href: "/sheets",            icon: BookOpen },
+  { name: "Projects",          href: "/projects",          icon: Briefcase },
+  { name: "Contests",          href: "/contests",          icon: Trophy },
+  { name: "Suggestions",       href: "/suggestions",       icon: MessageSquare },
+  { name: "Send Notification", href: "/send-notification", icon: Bell },
+  { name: "Sync Center",       href: "/sync",              icon: Zap },
+  { name: "Settings",          href: "/settings",          icon: Settings },
 ];
 
 export function AdminSidebar() {

@@ -17,18 +17,25 @@ export default function FeedbackButton() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    // Add necessary FormSubmit settings
-    formData.append('_captcha', 'false');
-    formData.append('_template', 'table');
-    formData.append('_subject', 'New Feedback for Codeyx Platform!');
+    const payload = {
+      email: formData.get('email')?.toString() || '',
+      message: formData.get('message')?.toString() || '',
+    };
 
     try {
-      const response = await fetch('https://formsubmit.co/ajax/codeyx6@gmail.com', {
+      // Assuming frontend and backend are on same localhost or mapped correctly
+      const token = localStorage.getItem('__clerk_db_jwt') || ''; // Just fallback if not authenticated
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/feedback`, {
         method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers,
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {

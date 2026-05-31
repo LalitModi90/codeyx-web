@@ -8,35 +8,42 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { progressService } from '../../services/progress.service';
 
-export default function WorkspacePage() {
-  const [activeSheets, setActiveSheets] = useState<any[]>([]);
+import { useUser } from '@clerk/nextjs';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('activeSheets');
-      if (saved) {
-        setActiveSheets(JSON.parse(saved));
-      }
-      
-      const handleWorkspaceUpdate = (e: any) => {
-        if (e.detail) {
-          setActiveSheets(e.detail);
-        }
-      };
-      window.addEventListener('workspaceUpdated', handleWorkspaceUpdate);
-      return () => window.removeEventListener('workspaceUpdated', handleWorkspaceUpdate);
-    }
-  }, []);
+export default function WorkspacePage() {
+  const { isLoaded, isSignedIn, user } = useUser();
+  const queryClient = useQueryClient();
+
+  const { data: allProgress = [], refetch: refetchProgress } = useQuery({
+    queryKey: ['allProgress', user?.id],
+    queryFn: async () => {
+      const response: any = await progressService.getAllProgress();
+      return response?.data || response || [];
+    },
+    enabled: isLoaded && !!isSignedIn,
+  });
+
+  const { data: stats = { solved: 0, total: 0 } } = useQuery({
+    queryKey: ['progressStats', user?.id],
+    queryFn: async () => {
+      const response: any = await progressService.getProgressStats();
+      return response?.data || response || { solved: 0, total: 0 };
+    },
+    enabled: isLoaded && !!isSignedIn,
+  });
+
+  const activeSheets = allProgress.filter((p: any) => p.solvedProblems > 0).sort((a: any, b: any) => {
+    return new Date(b.lastSolved || 0).getTime() - new Date(a.lastSolved || 0).getTime();
+  });
+
 
   const handleRemove = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
-    const newSheets = activeSheets.filter(s => s.id !== id);
-    setActiveSheets(newSheets);
-    localStorage.setItem('activeSheets', JSON.stringify(newSheets));
-    window.dispatchEvent(new CustomEvent('workspaceUpdated', { detail: newSheets }));
-    
     try {
       await progressService.deleteSheetProgress(id);
+      queryClient.invalidateQueries({ queryKey: ['allProgress'] });
+      queryClient.invalidateQueries({ queryKey: ['progressStats'] });
     } catch (err) {
       console.error('Failed to remove sheet progress from database:', err);
     }
@@ -83,7 +90,7 @@ export default function WorkspacePage() {
             </div>
             <div>
               <p className="text-sm font-bold text-gray-400 mb-1">Total Solved</p>
-              <p className="text-3xl font-black text-white">564</p>
+              <p className="text-3xl font-black text-white">{stats.solved || 0}</p>
             </div>
           </div>
 
@@ -93,8 +100,8 @@ export default function WorkspacePage() {
               <Target size={24} className="text-blue-500" />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-400 mb-1">Daily Streak</p>
-              <p className="text-3xl font-black text-white">12 <span className="text-sm text-gray-500 font-medium">Days</span></p>
+              <p className="text-sm font-bold text-gray-400 mb-1">Total Problems</p>
+              <p className="text-3xl font-black text-white">{stats.total || 0}</p>
             </div>
           </div>
         </div>
@@ -115,11 +122,11 @@ export default function WorkspacePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            {activeSheets.map((sheet, i) => {
-              const theme = getSheetIcon(sheet.id);
+            {activeSheets.map((sheet: any, i: number) => {
+              const theme = getSheetIcon(sheet.slug);
               const Icon = theme.icon;
               return (
-                <Link href={`/sheets/${sheet.id}`} key={sheet.id} className="block h-full">
+                <Link href={`/sheets/${sheet.slug}`} key={sheet.slug} className="block h-full">
                   <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -127,7 +134,7 @@ export default function WorkspacePage() {
                     className="bg-[#111216] border border-white/5 hover:border-white/10 rounded-[20px] p-6 relative overflow-hidden group transition-all duration-300 shadow-lg flex flex-col h-full cursor-pointer"
                   >
                     {/* Accent Line */}
-                    <div className="absolute top-0 left-0 h-[2px] bg-[#FF8A00] shadow-[0_0_10px_#FF8A00] transition-all duration-500" style={{ width: `${sheet.progress}%` }} />
+                    <div className="absolute top-0 left-0 h-[2px] bg-[#FF8A00] shadow-[0_0_10px_#FF8A00] transition-all duration-500" style={{ width: `${sheet.progressPercentage || 0}%` }} />
                     
                     <div className="flex gap-4 mb-5">
                       <div className={`w-14 h-14 rounded-[14px] bg-gradient-to-br ${theme.color} p-[1px] flex-shrink-0 shadow-lg`}>
@@ -136,10 +143,10 @@ export default function WorkspacePage() {
                         </div>
                       </div>
                       <div className="flex-1 pt-1">
-                        <h3 className="font-bold text-base text-white mb-1.5 leading-tight group-hover:text-[#FF8A00] transition-colors">{sheet.name}</h3>
+                        <h3 className="font-bold text-base text-white mb-1.5 leading-tight group-hover:text-[#FF8A00] transition-colors">{sheet.title}</h3>
                       </div>
                       
-                      <button onClick={(e) => handleRemove(e, sheet.id)} className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20">
+                      <button onClick={(e) => handleRemove(e, sheet.slug)} className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -147,11 +154,11 @@ export default function WorkspacePage() {
                     <div className="mt-auto">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-bold text-gray-400">Progress</span>
-                        <span className="text-sm font-black text-white">{sheet.progress}%</span>
+                        <span className="text-sm font-black text-white">{sheet.progressPercentage || 0}%</span>
                       </div>
                       
                       <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-6">
-                        <div className="h-full transition-all duration-1000 bg-gradient-to-r from-orange-600 to-[#FF8A00] shadow-[0_0_10px_#FF8A00]" style={{ width: `${sheet.progress}%` }} />
+                        <div className="h-full transition-all duration-1000 bg-gradient-to-r from-orange-600 to-[#FF8A00] shadow-[0_0_10px_#FF8A00]" style={{ width: `${sheet.progressPercentage || 0}%` }} />
                       </div>
 
                       <button className="w-full py-3 rounded-xl bg-white/5 group-hover:bg-[#FF8A00] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 group-hover:shadow-[0_0_20px_rgba(255,138,0,0.3)]">

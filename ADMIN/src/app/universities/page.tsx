@@ -1,12 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Building2, Search, CheckCircle, XCircle, MapPin, Trash2, Edit, RefreshCw } from "lucide-react";
+import { Building2, Search, CheckCircle, XCircle, MapPin, Trash2, Edit, RefreshCw, AlertTriangle } from "lucide-react";
 
 export default function UniversitiesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [universities, setUniversities] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [showModal, setShowModal] = useState(false);
+  const [editingUni, setEditingUni] = useState<any>(null);
+  const [formData, setFormData] = useState({ name: '', shortName: '', city: '', state: '', country: 'India', domain: '', verified: true });
+
 
   const fetchUniversities = async () => {
     setIsLoading(true);
@@ -28,19 +33,111 @@ export default function UniversitiesPage() {
   }, []);
 
   const handleAction = async (id: string, action: "Approved" | "Rejected" | "Delete") => {
-    // In a real app, you would make a fetch call here like:
-    // await fetch(`http://localhost:5005/api/universities/${id}/verify`, { method: 'PATCH', body: { isVerified: action === 'Approved' } })
-    
     if (action === "Delete") {
-      setUniversities(universities.filter(u => u._id !== id));
+      if (!confirm("Are you sure you want to delete this university?")) return;
+      try {
+        await fetch(`http://localhost:5005/api/universities/${id}`, { method: 'DELETE' });
+        setUniversities(universities.filter(u => u._id !== id));
+      } catch(e) {
+        console.error(e);
+      }
     } else {
-      setUniversities(universities.map(u => u._id === id ? { ...u, isVerified: action === "Approved" } : u));
+      try {
+        await fetch(`http://localhost:5005/api/universities/${id}/verify`, { 
+          method: 'PATCH', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ verified: action === "Approved" })
+        });
+        setUniversities(universities.map(u => u._id === id ? { ...u, verified: action === "Approved" } : u));
+      } catch(e) {
+        console.error(e);
+      }
     }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name) return alert("Name is required");
+    try {
+      if (editingUni) {
+        const res = await fetch(`http://localhost:5005/api/universities/${editingUni._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        const data = await res.json();
+        if (data.success) {
+          setUniversities(universities.map(u => u._id === editingUni._id ? data.data : u));
+          setShowModal(false);
+        } else {
+          alert(data.message);
+        }
+      } else {
+        const res = await fetch(`http://localhost:5005/api/universities`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        const data = await res.json();
+        if (data.success) {
+          setUniversities([data.data, ...universities]);
+          setShowModal(false);
+        } else {
+          alert(data.message);
+        }
+      }
+    } catch(err) {
+      alert("Error saving university");
+    }
+  };
+
+  const openAddModal = () => {
+    setEditingUni(null);
+    setFormData({ name: '', shortName: '', city: '', state: '', country: 'India', domain: '', verified: true });
+    setShowModal(true);
+  };
+
+  const openEditModal = (uni: any) => {
+    setEditingUni(uni);
+    setFormData({ 
+      name: uni.name || '', 
+      shortName: uni.shortName || '', 
+      city: uni.city || '', 
+      state: uni.state || '', 
+      country: uni.country || 'India', 
+      domain: uni.domain || '', 
+      verified: uni.verified 
+    });
+    setShowModal(true);
   };
 
   const filteredUnis = universities.filter(u => 
     u.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const checkDuplicate = (pendingUni: any) => {
+    if (pendingUni.verified) return null;
+    
+    const target = pendingUni.name?.toLowerCase().trim();
+    if (!target) return null;
+
+    const duplicate = universities.find(u => {
+      if (!u.verified || u._id === pendingUni._id) return false;
+      const existing = u.name?.toLowerCase().trim();
+      if (!existing) return false;
+      
+      // Exact match
+      if (existing === target) return true;
+      
+      // Strong similarity (one contains the other completely)
+      if (existing.length > 5 && target.length > 5) {
+        if (existing.includes(target) || target.includes(existing)) return true;
+      }
+      return false;
+    });
+    
+    return duplicate;
+  };
 
   return (
     <div className="space-y-6">
@@ -56,7 +153,7 @@ export default function UniversitiesPage() {
           >
             <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
           </button>
-          <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md font-medium transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={openAddModal} className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md font-medium transition-colors shadow-sm flex items-center gap-2">
             <Building2 size={18} />
             <span>Add New College</span>
           </button>
@@ -105,11 +202,25 @@ export default function UniversitiesPage() {
                 filteredUnis.map((uni) => (
                   <tr key={uni._id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4 font-semibold text-foreground">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-muted-foreground shrink-0">
-                          <Building2 size={16} />
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-muted-foreground shrink-0">
+                            <Building2 size={16} />
+                          </div>
+                          <span className="truncate">{uni.name}</span>
                         </div>
-                        <span className="truncate">{uni.name}</span>
+                        {(() => {
+                          const duplicate = checkDuplicate(uni);
+                          if (duplicate) {
+                            return (
+                              <div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold bg-orange-500/10 px-2 py-0.5 rounded-full w-fit mt-2 border border-orange-500/20 ml-10">
+                                <AlertTriangle size={12} /> 
+                                Warning: Matches "{duplicate.name}" (Already Approved)
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">
@@ -122,16 +233,16 @@ export default function UniversitiesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                        uni.isVerified 
+                        uni.verified 
                           ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                           : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
                       }`}>
-                        {uni.isVerified ? 'Approved' : 'Pending'}
+                        {uni.verified ? 'Approved' : 'Pending'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        {!uni.isVerified && (
+                        {!uni.verified && (
                           <>
                             <button 
                               onClick={() => handleAction(uni._id, 'Approved')}
@@ -147,7 +258,7 @@ export default function UniversitiesPage() {
                             </button>
                           </>
                         )}
-                        <button className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Edit">
+                        <button onClick={() => openEditModal(uni)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Edit">
                           <Edit size={16} />
                         </button>
                         <button 
@@ -165,6 +276,82 @@ export default function UniversitiesPage() {
           </table>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-card w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-border">
+            <h2 className="text-xl font-bold mb-4">{editingUni ? 'Edit University' : 'Add New College'}</h2>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">University Name *</label>
+                <input 
+                  type="text" required
+                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Short Name</label>
+                  <input 
+                    type="text"
+                    value={formData.shortName} onChange={e => setFormData({...formData, shortName: e.target.value})}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Domain</label>
+                  <input 
+                    type="text"
+                    value={formData.domain} onChange={e => setFormData({...formData, domain: e.target.value})}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">City</label>
+                  <input 
+                    type="text"
+                    value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">State</label>
+                  <input 
+                    type="text"
+                    value={formData.state} onChange={e => setFormData({...formData, state: e.target.value})}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">Country</label>
+                  <input 
+                    type="text"
+                    value={formData.country} onChange={e => setFormData({...formData, country: e.target.value})}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <input 
+                  type="checkbox" id="verified"
+                  checked={formData.verified}
+                  onChange={e => setFormData({...formData, verified: e.target.checked})}
+                  className="w-4 h-4 rounded"
+                />
+                <label htmlFor="verified" className="text-sm font-medium">Approved (Verified)</label>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 hover:bg-muted rounded-lg font-medium">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

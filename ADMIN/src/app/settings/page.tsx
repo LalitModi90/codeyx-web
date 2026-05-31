@@ -1,15 +1,73 @@
 "use client";
 
-import React, { useState } from "react";
-import { Save, User, Key, Globe, Shield, Database } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Save, User, Key, Globe, Shield, Database, RefreshCw } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [settings, setSettings] = useState({
+    platformName: "Codeyx",
+    supportEmail: "support@codeyx.com",
+    siteDescription: "Codeyx is a modern coding platform...",
+    maintenanceMode: false,
+    alfaLeetcodeUrl: "https://alfa-leetcode-api.onrender.com",
+    githubToken: ""
+  });
+  const { getToken } = useAuth();
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch("http://localhost:5005/api/admin/settings", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setSettings(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch settings", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChange = (e: any) => {
+    const { name, value, type, checked } = e.target;
+    setSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    setTimeout(() => setIsSaving(false), 1500);
+    try {
+      const token = await getToken();
+      const res = await fetch("http://localhost:5005/api/admin/settings", {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(settings)
+      });
+      const data = await res.json();
+      if (data.success) alert("Settings saved successfully!");
+      else alert("Failed to save settings: " + data.message);
+    } catch (err) {
+      alert("Error saving settings");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -30,75 +88,117 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Side Tabs (Static for demo) */}
+        {/* Side Tabs */}
         <div className="col-span-1 space-y-1">
-          <button className="w-full flex items-center gap-3 px-4 py-3 bg-card border border-primary/20 text-primary font-medium rounded-lg text-sm text-left shadow-sm">
+          <button 
+            onClick={() => setActiveTab('general')}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg text-sm text-left transition-colors ${
+              activeTab === 'general' ? 'bg-card border border-primary/20 text-primary shadow-sm' : 'hover:bg-muted text-muted-foreground'
+            }`}
+          >
             <Globe size={18} /> General
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-muted-foreground font-medium rounded-lg text-sm text-left transition-colors">
+          <button 
+            onClick={() => setActiveTab('api')}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg text-sm text-left transition-colors ${
+              activeTab === 'api' ? 'bg-card border border-primary/20 text-primary shadow-sm' : 'hover:bg-muted text-muted-foreground'
+            }`}
+          >
             <Key size={18} /> API Keys
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-muted-foreground font-medium rounded-lg text-sm text-left transition-colors">
+          <button 
+            onClick={() => setActiveTab('security')}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg text-sm text-left transition-colors ${
+              activeTab === 'security' ? 'bg-card border border-primary/20 text-primary shadow-sm' : 'hover:bg-muted text-muted-foreground'
+            }`}
+          >
             <Shield size={18} /> Security
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-muted-foreground font-medium rounded-lg text-sm text-left transition-colors">
+          <button 
+            onClick={() => setActiveTab('database')}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg text-sm text-left transition-colors ${
+              activeTab === 'database' ? 'bg-card border border-primary/20 text-primary shadow-sm' : 'hover:bg-muted text-muted-foreground'
+            }`}
+          >
             <Database size={18} /> Database
           </button>
         </div>
 
         {/* Content Area */}
         <div className="col-span-1 md:col-span-3 space-y-6">
-          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-border bg-muted/30">
-              <h3 className="font-bold text-foreground">General Configuration</h3>
-            </div>
-            <div className="p-6 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-sm font-medium text-foreground block mb-1.5">Platform Name</label>
-                  <input type="text" defaultValue="Codeyx" className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground block mb-1.5">Support Email</label>
-                  <input type="email" defaultValue="support@codeyx.com" className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
+          {activeTab === 'general' && (
+            <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-border bg-muted/30">
+                <h3 className="font-bold text-foreground">General Configuration</h3>
               </div>
-              
-              <div>
-                <label className="text-sm font-medium text-foreground block mb-1.5">Site Description (SEO)</label>
-                <textarea rows={3} defaultValue="Codeyx is a modern coding platform that provides coding sheets, programming contests, developer projects, and DSA practice." className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
-              </div>
+              <div className="p-6 space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-1.5">Platform Name</label>
+                    <input type="text" name="platformName" value={settings.platformName} onChange={handleChange} className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground block mb-1.5">Support Email</label>
+                    <input type="email" name="supportEmail" value={settings.supportEmail} onChange={handleChange} className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-1.5">Site Description (SEO)</label>
+                  <textarea rows={3} name="siteDescription" value={settings.siteDescription} onChange={handleChange} className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
+                </div>
 
-              <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
-                <div>
-                  <h4 className="font-semibold text-foreground text-sm">Maintenance Mode</h4>
-                  <p className="text-xs text-muted-foreground">Disable access to the main platform for regular users.</p>
+                <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
+                  <div>
+                    <h4 className="font-semibold text-foreground text-sm">Maintenance Mode</h4>
+                    <p className="text-xs text-muted-foreground">Disable access to the main platform for regular users.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="maintenanceMode" checked={settings.maintenanceMode} onChange={handleChange} className="sr-only peer" />
+                    <div className="w-11 h-6 bg-muted-foreground/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                  </label>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" />
-                  <div className="w-11 h-6 bg-muted-foreground/30 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
-                </label>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-border bg-muted/30">
-              <h3 className="font-bold text-foreground">API Integrations</h3>
-            </div>
-            <div className="p-6 space-y-5">
-              <div>
-                <label className="text-sm font-medium text-foreground block mb-1.5">Alfa LeetCode API URL</label>
-                <input type="text" defaultValue="https://alfa-leetcode-api.onrender.com" className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono" />
+          {activeTab === 'api' && (
+            <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-border bg-muted/30">
+                <h3 className="font-bold text-foreground">API Integrations</h3>
               </div>
-              <div>
-                <label className="text-sm font-medium text-foreground block mb-1.5">GitHub REST API Token (PAT)</label>
-                <input type="password" defaultValue="ghp_xxxxxxxxxxxxxxxxxxxxxx" className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono" />
-                <p className="text-xs text-muted-foreground mt-1">Used for syncing repositories and commits without rate limits.</p>
+              <div className="p-6 space-y-5">
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-1.5">Alfa LeetCode API URL</label>
+                  <input type="text" name="alfaLeetcodeUrl" value={settings.alfaLeetcodeUrl} onChange={handleChange} className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-1.5">GitHub REST API Token (PAT)</label>
+                  <input type="password" name="githubToken" value={settings.githubToken} onChange={handleChange} placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxx" className="w-full px-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono" />
+                  <p className="text-xs text-muted-foreground mt-1">Used for syncing repositories and commits without rate limits.</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {activeTab === 'security' && (
+            <div className="bg-card border border-border rounded-xl shadow-sm p-8 text-center text-muted-foreground">
+              <Shield size={48} className="mx-auto mb-4 opacity-20" />
+              <h3 className="text-lg font-bold text-foreground mb-2">Security Settings</h3>
+              <p>Advanced security configuration is coming in the next update.</p>
+            </div>
+          )}
+
+          {activeTab === 'database' && (
+            <div className="bg-card border border-border rounded-xl shadow-sm p-8 text-center text-muted-foreground">
+              <Database size={48} className="mx-auto mb-4 opacity-20" />
+              <h3 className="text-lg font-bold text-foreground mb-2">Database Management</h3>
+              <p>Database backup and manual indexing options will appear here.</p>
+            </div>
+          )}
         </div>
+
+
       </div>
     </div>
   );

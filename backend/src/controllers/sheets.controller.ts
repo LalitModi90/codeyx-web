@@ -24,6 +24,7 @@ export const getAllSheets = async (req: Request, res: Response) => {
     const data = sheets.map((sheet) => {
       const classes = deriveColorClasses(sheet.color);
       return {
+        _id: sheet._id,
         slug: sheet.slug,
         title: sheet.title,
         desc: sheet.description,
@@ -132,3 +133,54 @@ export const getSheetBySlug = async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Admin routes
+
+export const createSheet = async (req: Request, res: Response) => {
+  try {
+    const sheetData = req.body;
+    if (!sheetData.slug) {
+      sheetData.slug = sheetData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    }
+    const sheet = await DsaSheet.create(sheetData);
+    return res.status(201).json({ success: true, data: sheet });
+  } catch (error: any) {
+    console.error('[sheets:create] Error:', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateSheet = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    if (updateData.title && !updateData.slug) {
+      updateData.slug = updateData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    }
+    
+    const sheet = await DsaSheet.findByIdAndUpdate(id, updateData, { new: true });
+    if (!sheet) {
+      return res.status(404).json({ success: false, message: 'Sheet not found' });
+    }
+    return res.status(200).json({ success: true, data: sheet });
+  } catch (error: any) {
+    console.error('[sheets:update] Error:', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteSheet = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const sheet = await DsaSheet.findByIdAndDelete(id);
+    if (!sheet) {
+      return res.status(404).json({ success: false, message: 'Sheet not found' });
+    }
+    // Note: In a real system, you might want to also delete related DsaStep and SheetProblem documents
+    return res.status(200).json({ success: true, message: 'Sheet deleted successfully' });
+  } catch (error: any) {
+    console.error('[sheets:delete] Error:', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

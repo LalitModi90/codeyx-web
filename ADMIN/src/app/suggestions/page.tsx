@@ -10,7 +10,7 @@ export default function SuggestionsPage() {
   const fetchSuggestions = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:5005/api/suggestions");
+      const res = await fetch("http://localhost:5005/api/feedback");
       const data = await res.json();
       if (data.success) {
         setSuggestions(data.data);
@@ -26,9 +26,19 @@ export default function SuggestionsPage() {
     fetchSuggestions();
   }, []);
 
-  const updateStatus = (id: string, status: string) => {
-    // In a real app, send a PATCH request to backend here
-    setSuggestions(suggestions.map(s => s._id === id ? { ...s, status } : s));
+  const updateStatus = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`http://localhost:5005/api/feedback/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        setSuggestions(suggestions.map(s => s._id === id ? { ...s, status } : s));
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (

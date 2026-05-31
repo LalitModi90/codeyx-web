@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, Globe, Calendar, CalendarDays, Flag, User,
@@ -12,6 +12,7 @@ import { ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, Pola
 import TopNavbar from '@/components/shared/TopNavbar';
 import Link from 'next/link';
 import { useUser } from '@clerk/nextjs';
+import { io as socketIO } from 'socket.io-client';
 
 export default function LeaderboardPage() {
   const { user } = useUser();
@@ -97,21 +98,47 @@ export default function LeaderboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Fetch real-time leaderboard data
-  React.useEffect(() => {
-    const fetchLeaderboardData = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard?t=${Date.now()}`, { cache: 'no-store' });
-        const resData = await response.json();
-        if (resData.success) setLeaderboardData(resData.data);
-      } catch (err) {
-        console.error('Error fetching leaderboard:', err);
-      } finally {
-        setIsLoading(false);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
+
+  // Fetch leaderboard data
+  const fetchLeaderboardData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api'}/leaderboard?t=${Date.now()}`, { cache: 'no-store' });
+      const resData = await response.json();
+      if (resData.success) {
+        setLeaderboardData(resData.data);
+        setLastUpdated(new Date().toLocaleTimeString());
       }
-    };
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
+  };
+
+  // Initial fetch + Socket.io real-time + 30s polling fallback
+  useEffect(() => {
     fetchLeaderboardData();
+
+    // Socket.io real-time listener
+    const socket = socketIO(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5005', {
+      transports: ['websocket', 'polling'],
+    });
+    socket.on('leaderboard_updated', (payload: any) => {
+      if (payload?.data) {
+        setLeaderboardData(payload.data);
+        setLastUpdated(new Date().toLocaleTimeString());
+      }
+    });
+
+    // 30s polling as fallback if socket is slow
+    const interval = setInterval(() => fetchLeaderboardData(true), 30000);
+
+    return () => {
+      socket.disconnect();
+      clearInterval(interval);
+    };
   }, []);
 
   // Open user profile modal
@@ -433,7 +460,7 @@ export default function LeaderboardPage() {
               {/* Stats row */}
               <div className="grid grid-cols-4 divide-x divide-white/5 border-b border-white/5">
                 {[
-                  { label: 'Codeyx Score', value: `${selectedUser.rating}/100`, color: '#FF8A00' },
+                  { label: 'Codeyx Score', value: `${selectedUser.rating}%`, color: '#FF8A00' },
                   { label: 'Problems Solved', value: selectedUser.problems, color: '#22c55e' },
                   { label: 'Contests', value: selectedUser.contests, color: '#3b82f6' },
                   { label: 'Win Rate', value: `${selectedUser.winRate}%`, color: '#d946ef' },
@@ -858,8 +885,14 @@ export default function LeaderboardPage() {
                   </div>
 
                   <div className="flex flex-col items-end shrink-0 z-10">
-                    <span className="text-sm font-black text-white">{activeLeaderboard === 'Contest Leaderboard' ? (user.calculatedContestScore || 0).toLocaleString() : user.rating}</span>
-                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{activeLeaderboard === 'Contest Leaderboard' ? 'Rating' : 'Score'}</span>
+                    <span className="text-sm font-black text-white">
+                      {activeLeaderboard === 'Contest Leaderboard'
+                        ? (user.calculatedContestScore || 0).toLocaleString()
+                        : `${user.rating}%`}
+                    </span>
+                    <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">
+                      {activeLeaderboard === 'Contest Leaderboard' ? 'Rating' : 'Codeyx Score'}
+                    </span>
                   </div>
                 </div>
               );
@@ -955,12 +988,27 @@ export default function LeaderboardPage() {
                         </div>
                       </div>
 
-                      {/* Rating / Score */}
-                      <div className="col-span-2 flex items-center justify-end">
+                      {/* Score */}
+                      <div className="col-span-2 flex flex-col items-end justify-center gap-1">
                         {row.hasData ? (
-                          <span className="font-black text-[15px]" style={{ color: row.rank === 1 ? '#eab308' : row.rank === 2 ? '#c084fc' : row.rank === 3 ? '#FF8A00' : '#3b82f6' }}>
-                            {activeLeaderboard === 'Contest Leaderboard' ? (row.calculatedContestScore || 0).toLocaleString() : row.rating}
-                          </span>
+                          <>
+                            <span className="font-black text-[15px]" style={{ color: row.rank === 1 ? '#eab308' : row.rank === 2 ? '#c084fc' : row.rank === 3 ? '#FF8A00' : '#3b82f6' }}>
+                              {activeLeaderboard === 'Contest Leaderboard'
+                                ? (row.calculatedContestScore || 0).toLocaleString()
+                                : `${row.rating}%`}
+                            </span>
+                            {activeLeaderboard !== 'Contest Leaderboard' && (
+                              <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${row.rating}%`,
+                                    backgroundColor: row.rank === 1 ? '#eab308' : row.rank === 2 ? '#c084fc' : row.rank === 3 ? '#FF8A00' : '#3b82f6'
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <span className="text-xs font-bold text-gray-700 italic">—</span>
                         )}

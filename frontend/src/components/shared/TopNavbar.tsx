@@ -2,11 +2,14 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useUser, useClerk, SignInButton, SignedOut, SignedIn, UserButton } from '@clerk/nextjs';
-import { Search, Sun, Moon, Bell, ChevronDown, Briefcase, RefreshCw, Activity, ExternalLink, LogOut, User, Settings, Lock, Flame, Code2, Trophy, Clock, CalendarDays, Menu, X } from 'lucide-react';
+import { useUser, useClerk, SignInButton, SignedOut, SignedIn, UserButton, useAuth } from '@clerk/nextjs';
+import { Search, Sun, Moon, Bell, ChevronDown, Briefcase, RefreshCw, Activity, ExternalLink, LogOut, User, Settings, Lock, Flame, Code2, Trophy, Clock, CalendarDays, Menu, X, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { platformService } from '../../services/platform.service';
+import { progressService } from '../../services/progress.service';
+import { useSocket } from '../../hooks/useSocket';
+import { useQuery } from '@tanstack/react-query';
 import { SiLeetcode, SiCodeforces, SiGeeksforgeeks, SiCodechef, SiHackerrank, SiHackerearth, SiGithub } from 'react-icons/si';
 
 const platformsList = [
@@ -26,8 +29,20 @@ export default function TopNavbar() {
   const { user, isLoaded } = useUser();
   const { openUserProfile } = useClerk();
   const pathname = usePathname();
+  const socket = useSocket();
 
-  const [activeSheets, setActiveSheets] = React.useState(initialActiveSheets);
+  const { data: allProgress = [] } = useQuery({
+    queryKey: ['allProgress', user?.id],
+    queryFn: async () => {
+      const response: any = await progressService.getAllProgress();
+      return response?.data || response || [];
+    },
+    enabled: isLoaded && !!user,
+  });
+
+  const activeSheets = allProgress.filter((p: any) => p.solvedProblems > 0).sort((a: any, b: any) => {
+    return new Date(b.lastSolved || 0).getTime() - new Date(a.lastSolved || 0).getTime();
+  });
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const profileMenuRef = React.useRef<HTMLDivElement>(null);
@@ -37,24 +52,79 @@ export default function TopNavbar() {
   const [showNotifications, setShowNotifications] = React.useState(false);
   const notifRef = React.useRef<HTMLDivElement>(null);
 
-  const [notifications, setNotifications] = React.useState([
-    { id: 1, title: 'Codeforces Round (Div. 2)', message: 'Contest starts in 5 minutes!', time: 'Just now', read: false, type: 'urgent' },
-    { id: 2, title: 'Weekend Dev Challenge 52', message: 'Contest starts in 30 minutes!', time: '25m ago', read: false, type: 'soon' },
-    { id: 3, title: 'Leaderboard Updated', message: 'Congratulations! You are now ranked #14 Globally.', time: '1 hr ago', read: true, type: 'success' },
-    { id: 4, title: 'Weekly Contest 504', message: 'Contest starts today at 08:00 AM', time: '5 hrs ago', read: true, type: 'info' }
-  ]);
+  const [notifications, setNotifications] = React.useState<any[]>([]);
+  const [popupNotification, setPopupNotification] = React.useState<any>(null);
+  const { getToken } = useAuth();
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const fetchNotifications = async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`http://localhost:5005/api/notifications`, {
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications(data.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications");
+    }
   };
 
-  const clearAllNotifications = () => {
+  React.useEffect(() => {
+    if (isLoaded && user) {
+      fetchNotifications();
+    }
+  }, [isLoaded, user]);
+
+  React.useEffect(() => {
+    if (socket) {
+      socket.on('NEW_NOTIFICATION', (notification: any) => {
+        setNotifications((prev) => [notification, ...prev]);
+        setShowNotifications(true); 
+        
+        // Trigger Popup
+        setPopupNotification(notification);
+        setTimeout(() => {
+          setPopupNotification(null);
+        }, 5000);
+      });
+    }
+    return () => {
+      socket?.off('NEW_NOTIFICATION');
+    };
+  }, [socket]);
+
+  const markAllAsRead = async () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    try {
+      const token = await getToken();
+      await fetch(`http://localhost:5005/api/notifications/read`, { 
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+    } catch (err) {}
+  };
+
+  const clearAllNotifications = async () => {
     setNotifications([]);
+    try {
+      const token = await getToken();
+      await fetch(`http://localhost:5005/api/notifications`, { 
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+    } catch (err) {}
   };
 
   const [realPlatforms, setRealPlatforms] = React.useState<any[]>([]);
   const [lastSyncedAt, setLastSyncedAt] = React.useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = React.useState(false);
+  const [hasCheckedPlatforms, setHasCheckedPlatforms] = React.useState(false);
 
   const handleSyncAll = async () => {
     if (!user) return;
@@ -96,9 +166,13 @@ export default function TopNavbar() {
               new Date(p.lastSyncedAt) > new Date(max) ? p.lastSyncedAt : max, new Date(0)
             );
             if (latest && new Date(latest).getTime() > 0) setLastSyncedAt(new Date(latest));
+          } else {
+            setRealPlatforms([]);
           }
         } catch (e) {
           console.error('Failed to fetch platforms', e);
+        } finally {
+          setHasCheckedPlatforms(true);
         }
       };
 
@@ -119,7 +193,7 @@ export default function TopNavbar() {
       window.addEventListener('platformsUpdated', handlePlatformsUpdated);
       return () => window.removeEventListener('platformsUpdated', handlePlatformsUpdated);
     }
-  }, [isLoaded, user]);
+  }, [isLoaded, user, pathname]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -170,19 +244,6 @@ export default function TopNavbar() {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('activeSheets');
-      if (saved) {
-        setActiveSheets(JSON.parse(saved));
-      } else {
-        localStorage.setItem('activeSheets', JSON.stringify(initialActiveSheets));
-      }
-
-      const handleWorkspaceUpdate = (e: any) => {
-        if (e.detail) {
-          setActiveSheets(e.detail);
-        }
-      };
-
       let isScrollingNow = false;
       let scrollTimer: NodeJS.Timeout;
 
@@ -207,10 +268,8 @@ export default function TopNavbar() {
         }, 300);
       };
 
-      window.addEventListener('workspaceUpdated', handleWorkspaceUpdate);
       window.addEventListener('scroll', handleScroll, { passive: true });
       return () => {
-        window.removeEventListener('workspaceUpdated', handleWorkspaceUpdate);
         window.removeEventListener('scroll', handleScroll);
         clearTimeout(scrollTimer);
       };
@@ -334,14 +393,14 @@ export default function TopNavbar() {
                           <h3 className="text-gray-600 dark:text-gray-400 font-medium text-xs">Recently Active Sheets</h3>
                         </div>
                         <div className="flex flex-col gap-1 mb-4">
-                          {activeSheets.map(sheet => (
-                            <Link href={`/sheets/${sheet.id}`} key={sheet.id} className="flex flex-col p-3 hover:bg-white/[0.03] rounded-xl border border-transparent hover:border-gray-200 dark:border-white/5 transition-all group/sheet">
+                          {activeSheets.map((sheet: any) => (
+                            <Link href={`/sheets/${sheet.slug}`} key={sheet.slug} className="flex flex-col p-3 hover:bg-white/[0.03] rounded-xl border border-transparent hover:border-gray-200 dark:border-white/5 transition-all group/sheet">
                               <div className="flex justify-between items-center mb-2.5">
-                                <span className="text-xs font-semibold text-black dark:text-white group-hover/sheet:text-[#FF8A00] transition-colors">{sheet.name}</span>
-                                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{sheet.progress}%</span>
+                                <span className="text-xs font-semibold text-black dark:text-white group-hover/sheet:text-[#FF8A00] transition-colors">{sheet.title}</span>
+                                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{sheet.progressPercentage || 0}%</span>
                               </div>
                               <div className="h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-[#FF8A00] shadow-[0_0_10px_#FF8A00]" style={{ width: `${sheet.progress}%` }} />
+                                <div className="h-full bg-[#FF8A00] shadow-[0_0_10px_#FF8A00]" style={{ width: `${sheet.progressPercentage || 0}%` }} />
                               </div>
                             </Link>
                           ))}
@@ -514,8 +573,10 @@ export default function TopNavbar() {
                     className={`relative p-2 rounded-xl border ${border} text-gray-500 dark:text-[#A1A1AA] hover:text-black dark:text-white hover:bg-black/5 dark:bg-white/5 transition-all ${showNotifications ? 'bg-white/5 border-white/20 text-white' : ''}`}
                   >
                     <Bell size={15} />
-                    {notifications.some(n => !n.read) && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8A00] rounded-full border-2 border-[#09090B] animate-pulse" />
+                    {notifications.filter(n => !n.read).length > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center bg-[#FF8A00] text-[#09090B] text-[9px] font-black rounded-full px-1 shadow-[0_0_10px_rgba(255,138,0,0.5)]">
+                        {notifications.filter(n => !n.read).length}
+                      </span>
                     )}
                   </button>
 
@@ -567,7 +628,7 @@ export default function TopNavbar() {
                                   {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#FF8A00]" />}
                                 </div>
                                 <p className="text-[10px] text-gray-500 font-medium leading-relaxed">{n.message}</p>
-                                <span className="text-[9px] text-gray-600 mt-1 font-bold">{n.time}</span>
+                                <span className="text-[9px] text-gray-600 mt-1 font-bold">{n.createdAt ? new Date(n.createdAt).toLocaleString() : n.time}</span>
                               </div>
                             </div>
                           ))}
@@ -668,6 +729,71 @@ export default function TopNavbar() {
                 );
               })}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* GLOBAL MODAL FOR CONNECTING PLATFORMS */}
+      {isLoaded && user && hasCheckedPlatforms && realPlatforms.filter(p => p.platform !== 'codeyx').length === 0 && !pathname.startsWith('/settings') && (
+        <div className="fixed inset-0 z-[9999999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#111216] border border-[#FF8A00]/20 rounded-2xl p-8 shadow-[0_0_50px_rgba(255,138,0,0.15)] max-w-md w-full text-center relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF8A00]/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="w-16 h-16 bg-[#FF8A00]/10 border border-[#FF8A00]/20 rounded-full flex items-center justify-center mx-auto mb-6 text-[#FF8A00]">
+              <Globe size={32} />
+            </div>
+            
+            <h3 className="text-2xl font-black text-white mb-2">Connect a Platform</h3>
+            <p className="text-sm text-gray-400 mb-6 leading-relaxed font-medium">
+              You haven't connected any coding platforms yet. To use the Codeyx platform, you must connect at least one external platform like <strong className="text-white">GitHub</strong> or <strong className="text-white">LeetCode</strong>.
+            </p>
+            
+            <div className="flex flex-col gap-3">
+              <Link href="/settings/integrations">
+                <button className="w-full bg-[#FF8A00] hover:bg-orange-500 text-[#101014] font-black uppercase py-3 px-6 rounded-xl text-xs transition-all shadow-[0_4px_15px_rgba(255,138,0,0.3)]">
+                  Connect Platform Now
+                </button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* NEW NOTIFICATION POPUP (TOAST) */}
+      <AnimatePresence>
+        {popupNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="fixed bottom-6 right-6 z-[999999] bg-[#1a1b23] border border-[#FF8A00]/40 shadow-[0_10px_40px_rgba(255,138,0,0.2)] rounded-2xl p-4 w-[320px] flex gap-4 cursor-pointer"
+            onClick={() => {
+              setShowNotifications(true);
+              setPopupNotification(null);
+            }}
+          >
+            <div className="w-10 h-10 rounded-full bg-[#FF8A00]/20 flex items-center justify-center flex-shrink-0 text-[#FF8A00]">
+              <Bell size={20} className="animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-white text-sm font-bold mb-1 line-clamp-1">
+                {popupNotification.title || "New Notification"}
+              </h4>
+              <p className="text-gray-400 text-xs line-clamp-2 leading-relaxed">
+                {popupNotification.message || "You have received a new notification."}
+              </p>
+            </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setPopupNotification(null); }}
+              className="text-gray-500 hover:text-white absolute top-3 right-3"
+            >
+              <X size={14} />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

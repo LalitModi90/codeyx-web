@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bell, Send, Megaphone, Trash2 } from "lucide-react";
+import { Bell, Send, Megaphone, Trash2, RefreshCw } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 
 const initialAnnouncements = [
   { id: 1, title: "Platform Maintenance", content: "Codeyx will be down for maintenance this Sunday from 2 AM to 4 AM IST.", date: "May 30, 2026", audience: "All Users" },
@@ -12,28 +13,59 @@ export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [type, setType] = useState("info");
+  const [isSending, setIsSending] = useState(false);
+  const { getToken } = useAuth();
 
-  const handleBroadcast = (e: React.FormEvent) => {
+  const handleBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(!title || !content) return;
+    if(!title || !content) return alert("Title and message required");
     
-    setAnnouncements([{
-      id: Date.now(),
-      title,
-      content,
-      date: "Just now",
-      audience: "All Users"
-    }, ...announcements]);
-    
-    setTitle("");
-    setContent("");
+    setIsSending(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`http://localhost:5005/api/admin/notify`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          broadcast: true,
+          title,
+          message: content,
+          type
+        })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setAnnouncements([{
+          id: Date.now(),
+          title,
+          content,
+          date: "Just now",
+          audience: "All Users"
+        }, ...announcements]);
+        
+        setTitle("");
+        setContent("");
+        alert(`Broadcast sent to ${data.data.count} users successfully!`);
+      } else {
+        alert("Failed to broadcast: " + data.message);
+      }
+    } catch(err) {
+      alert("Error sending broadcast");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Announcements</h1>
+          <h1 className="text-3xl font-bold text-foreground">Notifications</h1>
           <p className="text-muted-foreground mt-1">Broadcast notifications to all Codeyx users.</p>
         </div>
       </div>
@@ -57,6 +89,19 @@ export default function AnnouncementsPage() {
               />
             </div>
             <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Type</label>
+              <select 
+                value={type}
+                onChange={e => setType(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value="info">Info (Blue)</option>
+                <option value="success">Success (Green)</option>
+                <option value="urgent">Urgent (Red)</option>
+                <option value="soon">Soon (Orange)</option>
+              </select>
+            </div>
+            <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Message</label>
               <textarea 
                 value={content}
@@ -68,9 +113,11 @@ export default function AnnouncementsPage() {
             </div>
             <button 
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              disabled={isSending}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Send size={16} /> Broadcast Now
+              {isSending ? <RefreshCw className="animate-spin" size={16} /> : <Send size={16} />}
+              {isSending ? "Broadcasting..." : "Broadcast Now"}
             </button>
           </form>
         </div>
@@ -78,7 +125,7 @@ export default function AnnouncementsPage() {
         {/* History */}
         <div className="lg:col-span-2 space-y-4">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
-            <Bell size={18} /> Announcement History
+            <Bell size={18} /> Notification History
           </h3>
           
           {announcements.map((ann) => (

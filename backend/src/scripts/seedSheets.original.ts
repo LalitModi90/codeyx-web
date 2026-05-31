@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { DsaSheet } from '../models/DsaSheet';
 import { DsaStep } from '../models/DsaStep';
-import { Problem } from '../models/Problem';
+import { MasterProblem } from '../models/MasterProblem';
+import { SheetProblem } from '../models/SheetProblem';
 
 dotenv.config();
 
@@ -367,7 +368,7 @@ const striverProblems: Array<{
   },
 ];
 
-async function seed() {
+export async function seed() {
   try {
     const mongoUri = process.env.MONGODB_URI;
     if (!mongoUri) {
@@ -380,7 +381,7 @@ async function seed() {
 
     await DsaSheet.deleteMany({});
     await DsaStep.deleteMany({});
-    await Problem.deleteMany({});
+    await SheetProblem.deleteMany({});
     console.log('Cleared existing data');
 
     for (const sheetData of sheetsData) {
@@ -400,30 +401,43 @@ async function seed() {
         if (sheet.slug === 'striver-a2z') {
           const stepProblems = striverProblems.find((sp) => sp.stepNumber === stepData.stepNumber);
           if (stepProblems) {
-            const problemsToInsert = stepProblems.problems.map((p) => ({
-              sheetId: sheet._id,
-              stepId: step._id,
-              problemId: p.problemId,
-              name: p.name,
-              difficulty: p.difficulty,
-              platform: p.platform,
-              link: '',
-            }));
-            if (problemsToInsert.length > 0) {
-              await Problem.insertMany(problemsToInsert);
-              console.log(`    Created ${problemsToInsert.length} problems`);
+            let order = 1;
+            for (const p of stepProblems.problems) {
+              const titleKey = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              let mp = await MasterProblem.findOne({ problemId: p.problemId });
+              if (!mp) {
+                mp = await MasterProblem.create({
+                  problemId: p.problemId,
+                  title: p.name,
+                  titleKey,
+                  difficulty: p.difficulty,
+                  platform: p.platform,
+                  link: '',
+                  active: true
+                });
+              }
+              await SheetProblem.create({
+                sheetId: sheet._id,
+                stepId: step._id,
+                masterProblemId: p.problemId,
+                orderInStep: order++
+              });
             }
+            console.log(`    Created ${stepProblems.problems.length} problems`);
           }
         }
       }
     }
 
     console.log('\nSeeding completed successfully!');
-    process.exit(0);
+    // Removed process.exit(0) for safe calling
   } catch (error) {
     console.error('Seeding failed:', error);
-    process.exit(1);
+    throw error;
   }
 }
 
-seed();
+// Only run automatically if called directly from CLI
+if (require.main === module) {
+  seed().then(() => process.exit(0)).catch(() => process.exit(1));
+}

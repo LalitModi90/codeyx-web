@@ -145,6 +145,9 @@ export default function SheetDetailsPage({ params }: { params: { slug: string } 
       queryClient.invalidateQueries({ queryKey: ['stepProgress'] });
       queryClient.invalidateQueries({ queryKey: ['rbCategories'] });
       queryClient.invalidateQueries({ queryKey: ['patterns'] });
+      queryClient.invalidateQueries({ queryKey: ['allProgress'] });
+      queryClient.invalidateQueries({ queryKey: ['progressStats'] });
+      queryClient.invalidateQueries({ queryKey: ['sheetProgress'] });
     } catch (err: any) {
       console.error('[SheetDetail] Toggle error:', err);
       // WE REMOVED THE ROLLBACK HERE SO IT STAYS TICKED IN UI!

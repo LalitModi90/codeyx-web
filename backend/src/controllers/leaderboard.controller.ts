@@ -3,11 +3,15 @@ import { clerkClient } from '@clerk/clerk-sdk-node';
 import { PlatformStats } from '../models/platformStats.model';
 import { Profile } from '../models/profile.model';
 import { User } from '../models/user.model';
+import { getSocketIo } from '../socket';
 
-// ─── Helper: compute radar axes and weighted Codeyx Score ────────────────────
+// ─── Helper: compute radar axes and weighted Codeyx Score ─────────────────
+// Codeyx Score (0-100) = Competitive Score (70pts) + Developer Score (30pts)
 function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
     let totalSolved = 0;
-    let combinedRating = 0;
+    let leetcodeRating = 0;
+    let codeforcesRating = 0;
+    let codechefRating = 0;
     let contestsCount = 0;
     let highestStreak = 0;
     const platformBreakdown: Record<string, { rating: number; solved: number; contests: number }> = {};
@@ -17,85 +21,83 @@ function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
         const pSolved  = s.totalSolved || 0;
         let   pContests = 0;
 
-        // We only sum up specific external platforms for totalSolved/combinedRating to avoid double counting
-        // since 'codeyx' platform tracks the aggregate overall platform activity.
-        if (s.platform !== 'codeyx' && s.platform !== 'github') {
-            totalSolved     += pSolved;
-            combinedRating  += pRating;
+        if (s.platform === 'leetcode') {
+            leetcodeRating = pRating;
+            totalSolved += pSolved;
+            if (s.stats?.contestAttend !== undefined) {
+                pContests = s.stats.contestAttend;
+            } else if (s.stats?.raw?.userContestRankingHistory) {
+                pContests = (s.stats.raw.userContestRankingHistory || []).filter((c: any) => c.attended === true || c.rating > 0).length;
+            } else if (Array.isArray(s.stats?.contests)) {
+                pContests = s.stats.contests.length;
+            }
+        } else if (s.platform === 'codeforces') {
+            codeforcesRating = pRating;
+            totalSolved += pSolved;
+            pContests = s.stats?.ratingCount || 0;
+        } else if (s.platform === 'codechef') {
+            codechefRating = pRating;
+            totalSolved += pSolved;
+            pContests = Array.isArray(s.stats?.contests) ? s.stats.contests.length : (parseInt(s.stats?.contests) || 0);
+        }
+        // github and codeyx don't add to competitive score
+
+        if (s.stats?.streak && s.stats.streak > highestStreak) {
+            highestStreak = s.stats.streak;
         }
 
-        if (s.stats) {
-            if (s.platform === 'leetcode') {
-                if (s.stats.contestAttend !== undefined) {
-                    pContests = s.stats.contestAttend;
-                } else if (s.stats.raw && s.stats.raw.userContestRankingHistory) {
-                    const history = s.stats.raw.userContestRankingHistory || [];
-                    pContests = history.filter((c: any) => c.attended === true || c.rating > 0).length;
-                } else if (Array.isArray(s.stats.contests)) {
-                    pContests = s.stats.contests.length;
-                }
-            }
-            else if (s.platform === 'codeforces' && s.stats.ratingCount)    pContests = s.stats.ratingCount;
-            else if (s.platform === 'codechef'   && s.stats.contests)       pContests = Array.isArray(s.stats.contests) ? s.stats.contests.length : (parseInt(s.stats.contests) || 0);
-            
-            if (s.stats.streak && s.stats.streak > highestStreak) {
-                highestStreak = s.stats.streak;
-            }
-        }
         contestsCount += pContests;
-
         platformBreakdown[s.platform] = { rating: pRating, solved: pSolved, contests: pContests };
     });
 
-    if (contestsCount === 0 && totalSolved > 0) contestsCount = Math.ceil(totalSolved / 25);
+    // ── 1. COMPETITIVE SCORE (0-70 pts) ─────────────────────────────────────
+    // LeetCode Rating: 0-3500 → 0-20 pts
+    const lcScore   = Math.min(20, (leetcodeRating / 3500) * 20);
+    // Codeforces Rating: 0-3500 → 0-20 pts  
+    const cfScore   = Math.min(20, (codeforcesRating / 3500) * 20);
+    // CodeChef Rating: 0-3500 → 0-10 pts
+    const ccScore   = Math.min(10, (codechefRating / 3500) * 10);
+    // Problems Solved: 0-2000 → 0-15 pts
+    const solvedScore = Math.min(15, (totalSolved / 2000) * 15);
+    // Contests Participated: 0-200 → 0-5 pts
+    const contestScore = Math.min(5, (contestsCount / 200) * 5);
 
-    // ── 1. Competitive Programming Score (Max 80 points) ───────────────────
-    const maxRating   = 3000;  // Adjusted from 10000 to 3000 (standard high rating)
-    const maxSolved   = 1000;  // Adjusted from 3000 to 1000
-    const maxContests = 100;   // Adjusted from 500 to 100
+    const competitiveScore = lcScore + cfScore + ccScore + solvedScore + contestScore;
 
-    // Rating is heavily weighted
-    const contestRatingScore = Math.min(40, (combinedRating / maxRating) * 40); // 40%
-    
-    // Solved problems 
-    const problemsSolvedScore = Math.min(25, (totalSolved / maxSolved) * 25); // 25%
-    
-    // Accuracy scales slightly with how many problems they solved (shows they maintain accuracy over time)
-    const accuracyScore = Math.min(10, (Math.min(totalSolved, 200) / 200) * 10); // 10%
-    
-    // Consistency scales with contests
-    const consistencyScore = Math.min(3, (contestsCount / maxContests) * 3); // 3%
-    
-    // Speed proxy: assuming more contests = better speed
-    const speedScore = Math.min(2, (Math.min(contestsCount, 50) / 50) * 2); // 2%
-
-    const competitiveScore = contestRatingScore + problemsSolvedScore + accuracyScore + consistencyScore + speedScore;
-
-    // ── 2. Developer Engineering & Reputation Score (Max 20 points) ─────────────────────
+    // ── 2. DEVELOPER SCORE (0-30 pts) ────────────────────────────────────────
     const githubData = userStats.find(s => s.platform === 'github');
-    const repos = githubData?.stats?.repos || 0;
-    const stars = githubData?.stats?.totalStars || 0;
-    
-    const githubContributions = Math.min(7, (repos / 20) * 7); // up to 7 pts for 20+ repos
-    const openSourceActivity = Math.min(5, (stars / 50) * 5); // up to 5 pts for 50+ stars
-    const liveProjects = (userProfile?.projects?.length || 0) > 0 ? 5 : 0; // currently 0 since not fetched
-    const portfolioQuality = (userProfile?.bio?.length || 0) > 20 ? 3 : 0; // up to 3 pts for good bio
+    const repos  = githubData?.stats?.repos || 0;
+    const stars  = githubData?.stats?.totalStars || 0;
+    const commits = githubData?.stats?.totalCommits || githubData?.stats?.contributions || 0;
 
-    const developerScore = githubContributions + openSourceActivity + liveProjects + portfolioQuality;
+    // Repos: 0-50 → 0-10 pts
+    const repoScore    = Math.min(10, (repos / 50) * 10);
+    // Stars: 0-100 → 0-8 pts
+    const starScore    = Math.min(8, (stars / 100) * 8);
+    // Commits: 0-500 → 0-7 pts
+    const commitScore  = Math.min(7, (commits / 500) * 7);
+    // Profile quality: bio + college → 0-5 pts
+    const bioScore     = (userProfile?.bio?.length || 0) > 20 ? 3 : 0;
+    const collegeScore = (userProfile?.college?.length || 0) > 2 ? 2 : 0;
 
-    // ── Final Global Codeyx Score (0-100) ──────────────────────────────────
-    const codeyxScore = Math.round(competitiveScore + developerScore);
+    const developerScore = repoScore + starScore + commitScore + bioScore + collegeScore;
 
-    // Old Radar Stats (Mapping for frontend compatibility)
-    const problemSolving = Math.min(100, Math.round((problemsSolvedScore / 20) * 100));
-    const contestAxis    = Math.min(100, Math.round((contestRatingScore / 35) * 100));
-    const speed          = Math.min(100, Math.round((speedScore / 2) * 100));
-    const accuracy       = Math.min(100, Math.round((accuracyScore / 10) * 100));
-    const consistency    = Math.min(100, Math.round((consistencyScore / 3) * 100));
+    // ── FINAL CODEYX SCORE (0-100) ────────────────────────────────────────────
+    const codeyxScore = Math.min(100, Math.round(competitiveScore + developerScore));
+
+    // ── RADAR STATS (normalized 0-100 for each axis) ─────────────────────────
+    const combinedRating = leetcodeRating + codeforcesRating + codechefRating;
+    const problemSolving = Math.min(100, Math.round((totalSolved / 2000) * 100));
+    const contestAxis    = Math.min(100, Math.round((combinedRating / 7000) * 100));
+    const speed          = Math.min(100, Math.round((contestsCount / 100) * 100));
+    const accuracy       = Math.min(100, Math.round((Math.max(leetcodeRating, codeforcesRating, codechefRating) / 3500) * 100));
+    const consistency    = Math.min(100, Math.round((highestStreak / 365) * 100));
 
     const externalPlatforms = Object.keys(platformBreakdown).filter(p => p !== 'codeyx');
     const hasConnected = externalPlatforms.length > 0;
-    const hasData      = hasConnected && (totalSolved > 0 || combinedRating > 0);
+    // hasData: true if any competitive platform data OR github has repos/commits
+    const githubHasData = (repos > 0 || stars > 0 || commits > 0);
+    const hasData = hasConnected && (totalSolved > 0 || combinedRating > 0 || githubHasData);
 
     // Friendly display name: prioritize Mongoose profile name, fallback to Clerk
     const firstName = clerkUser.firstName || '';
@@ -170,22 +172,24 @@ export const getLeaderboard = async (req: Request, res: Response) => {
             if (profile?.username) {
                 u.username = profile.username;
             }
-            // If profile.username doesn't exist, it already has the default emailPrefix from buildUserEntry
-            // We intentionally do NOT run any deduplication or shifting logic here as per user request.
+            // Ensure username is never null. Fallback to a default name.
+            if (!u.username) {
+                // If email prefix failed, use a part of their user ID
+                u.username = `user_${u.userId.substring(u.userId.length - 6)}`;
+            }
             return u;
         });
 
-        // 4. Only keep users who have at least one connected platform (Stats are required)
-        const activeUsers = leaderboardData.filter((u: any) => u.hasConnected);
-
-        // 5. Sort: highest codeyxScore first; ties broken by problems solved
-        activeUsers.sort((a: any, b: any) => {
-            if (b.rating !== a.rating) return b.rating - a.rating;
-            return b.problems - a.problems;
+        // 4. Sort purely by Codeyx Score (highest first)
+        // Users with no data have score=0 → naturally go to bottom
+        leaderboardData.sort((a: any, b: any) => {
+            if (b.rating !== a.rating) return b.rating - a.rating;       // Score DESC
+            if (b.problems !== a.problems) return b.problems - a.problems; // Tie: problems DESC
+            return b.rawCombinedRating - a.rawCombinedRating;             // Tie: rating DESC
         });
 
-        // 6. Assign rank badges
-        const rankedUsers = activeUsers.map((item: any, index: number) => {
+        // 5. Assign rank badges
+        const rankedUsers = leaderboardData.map((item: any, index: number) => {
             const rank = index + 1;
             let badge = 'shield', badgeColor = 'text-blue-500';
             if      (rank === 1) { badge = 'crown';   badgeColor = 'text-yellow-500'; }
@@ -195,7 +199,13 @@ export const getLeaderboard = async (req: Request, res: Response) => {
             return { ...item, rank, badge, badgeColor };
         });
 
-        return res.json({ success: true, data: rankedUsers });
+        // 6. Broadcast via Socket.io so all connected clients get real-time update
+        try {
+            const socketIo = getSocketIo();
+            socketIo.emit('leaderboard_updated', { data: rankedUsers, updatedAt: new Date().toISOString() });
+        } catch (_) { /* socket not ready, ignore */ }
+
+        return res.json({ success: true, data: rankedUsers, updatedAt: new Date().toISOString() });
     } catch (err: any) {
         console.error('Leaderboard Fetch Error:', err.message);
         return res.status(500).json({ success: false, message: 'Server Error fetching leaderboard' });

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { University } from '../models/university.model';
+import { Profile } from '../models/profile.model';
 
 // Normalization Helper
 export const normalizeUniversityName = (name: string): string => {
@@ -121,6 +122,51 @@ export const verifyUniversity = async (req: Request, res: Response) => {
     }
     
     res.status(200).json({ success: true, data: university });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Admin route to update university details
+export const updateUniversity = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const existingUni = await University.findById(id);
+    if (!existingUni) {
+      return res.status(404).json({ success: false, message: 'University not found' });
+    }
+
+    if (updateData.name) {
+      updateData.normalizedName = normalizeUniversityName(updateData.name);
+    }
+    
+    const university = await University.findByIdAndUpdate(id, updateData, { new: true });
+    
+    // Cascade update to user profiles if the name changed
+    if (updateData.name && existingUni.name !== updateData.name) {
+      await Profile.updateMany(
+        { college: existingUni.name },
+        { $set: { college: updateData.name } }
+      );
+    }
+    
+    res.status(200).json({ success: true, data: university });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Admin route to delete university
+export const deleteUniversity = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const university = await University.findByIdAndDelete(id);
+    if (!university) {
+      return res.status(404).json({ success: false, message: 'University not found' });
+    }
+    res.status(200).json({ success: true, message: 'University deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Server error' });
   }

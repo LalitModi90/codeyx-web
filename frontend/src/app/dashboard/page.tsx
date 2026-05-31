@@ -3,12 +3,12 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import {
   CheckSquare, Square, Play, RotateCcw, FolderGit2, Bot, Calendar, Download, Eye,
   Globe, Trophy, Flame, CheckCircle2, Target, Code2, Layers,
   MonitorSmartphone, Briefcase, ChevronRight, Activity, TrendingUp,
-  Zap, BookOpen, Crown, User, Plus, Trash2, Sparkles, Rocket
+  Zap, BookOpen, Crown, User, Plus, Trash2, Sparkles, Rocket, Bell
 } from 'lucide-react';
 import ActivityHeatmap from '../../components/dashboard/ActivityHeatmap';
 import TopNavbar from '../../components/shared/TopNavbar';
@@ -21,10 +21,13 @@ export default function CodeyxDashboard() {
   const [theme, setTheme] = useState('dark');
   const [comingSoonTitle, setComingSoonTitle] = useState('');
   const [showMockModal, setShowMockModal] = useState(false);
-  const [showExtensionModal, setShowExtensionModal] = useState(false);
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const queryClient = useQueryClient();
   const socket = useSocket();
+
+  const [adminNotification, setAdminNotification] = useState<any>(null);
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
 
   type Task = { id: number; text: string; done: boolean; };
   const [checklist, setChecklist] = useState<Task[]>([]);
@@ -100,11 +103,37 @@ export default function CodeyxDashboard() {
         console.log('Got live sync update for', data.platform);
         queryClient.invalidateQueries({ queryKey: ['platformStats'] });
       });
+      socket.on('NEW_NOTIFICATION', (notification) => {
+        setAdminNotification(notification);
+      });
     }
     return () => {
       socket?.off('SYNC_COMPLETE');
-    }
+      socket?.off('NEW_NOTIFICATION');
+    };
   }, [socket, queryClient]);
+
+  // Fetch initial notifications
+  React.useEffect(() => {
+    const fetchAdminNotification = async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const res = await fetch(`http://localhost:5005/api/notifications`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.data?.length > 0) {
+          // Find the most recent unread notification
+          const unread = data.data.find((n: any) => !n.read);
+          if (unread) setAdminNotification(unread);
+        }
+      } catch (err) {}
+    };
+    if (isLoaded && user) {
+      fetchAdminNotification();
+    }
+  }, [isLoaded, user, getToken]);
 
   // Fetch REAL LeetCode Stats
   const { data: leetcodeRes, isLoading: lcLoading } = useQuery({
@@ -350,6 +379,45 @@ export default function CodeyxDashboard() {
                 </form>
               </div>
             </div>
+
+            {/* ADMIN NOTIFICATION BANNER */}
+            {adminNotification && (
+              <div 
+                onClick={() => setSelectedNotification(adminNotification)}
+                className={`mb-6 relative overflow-hidden rounded-[24px] p-6 shadow-xl border border-[#FF8A00]/30 bg-gradient-to-r from-[#FF8A00]/10 to-[#101014] cursor-pointer hover:border-[#FF8A00]/50 hover:shadow-[0_0_20px_rgba(255,138,0,0.15)] transition-all group`}
+              >
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF8A00]/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/2 group-hover:bg-[#FF8A00]/20 transition-all" />
+                <div className="relative z-10 flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-[#FF8A00]/20 flex items-center justify-center shrink-0 border border-[#FF8A00]/30 group-hover:scale-110 transition-transform">
+                    <Bell className="text-[#FF8A00] animate-pulse" size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-black text-white mb-1 flex items-center gap-2">
+                      {adminNotification.title || "Admin Announcement"}
+                      <span className="bg-[#FF8A00] text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">New</span>
+                    </h3>
+                    <p className="text-gray-300 text-sm leading-relaxed max-w-3xl line-clamp-2">
+                      {adminNotification.message}
+                    </p>
+                    <p className="text-[#FF8A00] text-xs font-bold mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Click to read full message &rarr;</p>
+                  </div>
+                  <button 
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setAdminNotification(null);
+                      try {
+                        const token = await getToken();
+                        await fetch(`http://localhost:5005/api/notifications/read`, { method: "PUT", headers: { "Authorization": `Bearer ${token}` }});
+                      } catch(err) {}
+                    }}
+                    className="shrink-0 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 p-2 rounded-xl transition-all z-20"
+                    title="Dismiss"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ROW 2: Continue Solving & Quick Actions */}
             <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
@@ -700,40 +768,51 @@ export default function CodeyxDashboard() {
           </motion.div>
         </div>
       )}
-      {/* CUSTOM MODAL FOR EXTENSION INSTALLATION */}
-      {showExtensionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      {/* FULL ADMIN NOTIFICATION MODAL */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#111216] border border-white/10 rounded-2xl p-6 shadow-2xl max-w-md w-full text-left relative overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-[#111216] border border-[#FF8A00]/30 rounded-3xl p-8 shadow-2xl max-w-2xl w-full relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF8A00]/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#FF8A00]/20 border border-[#FF8A00]/30 rounded-xl flex items-center justify-center text-[#FF8A00]">
-                  <MonitorSmartphone size={20} />
-                </div>
-                <h3 className="text-lg font-extrabold text-white">Install Codeyx Sync</h3>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF8A00]/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/2" />
+            
+            <div className="flex items-center gap-4 mb-6 relative z-10">
+              <div className="w-14 h-14 rounded-full bg-[#FF8A00]/20 flex items-center justify-center shrink-0 border border-[#FF8A00]/30">
+                <Bell className="text-[#FF8A00]" size={28} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white">
+                  {selectedNotification.title || "Admin Announcement"}
+                </h3>
+                <p className="text-[#FF8A00] text-xs font-bold uppercase tracking-widest mt-1">
+                  Official Communication
+                </p>
               </div>
             </div>
             
-            <p className="text-xs text-gray-400 mb-4">The Codeyx extension is generated locally. Follow these steps to install it in Chrome:</p>
+            <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 max-h-[50vh] overflow-y-auto custom-scrollbar">
+              <p className="text-gray-300 text-sm md:text-base leading-relaxed whitespace-pre-wrap">
+                {selectedNotification.message}
+              </p>
+            </div>
             
-            <ol className="text-xs text-gray-300 space-y-3 pl-4 list-decimal marker:text-[#FF8A00] font-medium mb-6">
-              <li>Open a new tab and go to <code className="bg-white/10 px-1.5 py-0.5 rounded text-white font-mono">chrome://extensions</code></li>
-              <li>Toggle <strong className="text-white">Developer mode</strong> ON in the top right corner.</li>
-              <li>Click <strong className="text-white">Load unpacked</strong> at the top left.</li>
-              <li>Select the <code className="bg-white/10 px-1.5 py-0.5 rounded text-white font-mono">f:\Codeyx\extension</code> folder.</li>
-              <li>Pin the extension, open it, and save your Codeyx User ID.</li>
-            </ol>
-
-            <button 
-              onClick={() => setShowExtensionModal(false)}
-              className="bg-[#FF8A00] hover:bg-orange-500 text-[#101014] font-bold py-2.5 px-6 rounded-xl text-sm transition-all w-full shadow-[0_4px_15px_rgba(255,138,0,0.3)]"
-            >
-              Done
-            </button>
+            <div className="flex justify-end relative z-10">
+              <button 
+                onClick={async () => {
+                  setSelectedNotification(null);
+                  setAdminNotification(null); // Also remove from dashboard
+                  try {
+                    const token = await getToken();
+                    await fetch(`http://localhost:5005/api/notifications/read`, { method: "PUT", headers: { "Authorization": `Bearer ${token}` }});
+                  } catch(e) {}
+                }}
+                className="bg-[#FF8A00] hover:bg-orange-500 text-black font-black uppercase py-3 px-8 rounded-xl text-xs transition-all shadow-[0_4px_15px_rgba(255,138,0,0.3)]"
+              >
+                Mark as Read & Close
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
