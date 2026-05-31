@@ -381,7 +381,8 @@ export default function SheetDetailsPage({ params }: { params: { slug: string } 
             <div className="space-y-2">
               {roadmapSections.filter((section: any) => section.title.toLowerCase().includes(roadmapSearch.toLowerCase())).map((section: any, idx: number) => {
                 const isActive = activeSection === section.id;
-                const sortedInSection = section.problems?.filter((p: any) => solvedIds.has(p.problemId)).length || 0;
+                // Prefer backend's calculated count, fallback to frontend manual count if backend data isn't loaded yet
+                const sortedInSection = section.solved > 0 ? section.solved : (section.problems?.filter((p: any) => solvedIds.has(p.problemId)).length || 0);
                 const completionPercent = section.total > 0 ? Math.round((sortedInSection / section.total) * 100) : 0;
                 return (
                   <div 
@@ -438,13 +439,13 @@ export default function SheetDetailsPage({ params }: { params: { slug: string } 
                 
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-xs text-gray-400 font-bold w-32 shrink-0">
-                    {activeModule?.problems?.filter((p: any) => solvedIds.has(p.problemId)).length || 0} / {activeModule?.total ?? 0} solved
+                    {activeModule?.solved > 0 ? activeModule.solved : (activeModule?.problems?.filter((p: any) => solvedIds.has(p.problemId)).length || 0)} / {activeModule?.total ?? 0} solved
                   </span>
                   <div className="h-1 bg-[#09090B] flex-1 rounded-full overflow-hidden border border-white/5">
-                    <div className="h-full bg-[#FF8A00] rounded-full transition-all duration-500 ease-out" style={{ width: `${activeModule && activeModule.total > 0 ? Math.round(((activeModule.problems?.filter((p: any) => solvedIds.has(p.problemId)).length || 0) / activeModule.total) * 100) : 0}%` }} />
+                    <div className="h-full bg-[#FF8A00] rounded-full transition-all duration-500 ease-out" style={{ width: `${activeModule && activeModule.total > 0 ? Math.round(((activeModule?.solved > 0 ? activeModule.solved : (activeModule.problems?.filter((p: any) => solvedIds.has(p.problemId)).length || 0)) / activeModule.total) * 100) : 0}%` }} />
                   </div>
                   <span className="text-xs font-black text-white">
-                    {activeModule && activeModule.total > 0 ? Math.round(((activeModule.problems?.filter((p: any) => solvedIds.has(p.problemId)).length || 0) / activeModule.total) * 100) : 0}%
+                    {activeModule && activeModule.total > 0 ? Math.round(((activeModule?.solved > 0 ? activeModule.solved : (activeModule.problems?.filter((p: any) => solvedIds.has(p.problemId)).length || 0)) / activeModule.total) * 100) : 0}%
                   </span>
                 </div>
               </div>

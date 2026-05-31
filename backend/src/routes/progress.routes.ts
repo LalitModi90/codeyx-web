@@ -11,13 +11,21 @@ import {
   getSheetBySlug,
   getProgressStats,
   deleteSheetProgress,
-  extensionSync
+  extensionSync,
+  manualSyncFix,
+  debugMasterProblem,
+  debugActivities
 } from '../controllers/progress.controller';
 
 const router = Router();
 
 // Extension Webhook (unprotected, validates userId internally)
 router.post('/extension-sync', extensionSync);
+
+// Backend Fix Route
+router.get('/manual-fix', manualSyncFix);
+router.get('/debug-problem', debugMasterProblem);
+router.get('/debug-activities', debugActivities);
 
 router.use(protectRoute);
 

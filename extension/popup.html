@@ -1,28 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 260px; padding: 20px; background: #09090B; color: #FAFAFA; margin: 0; }
-    h3 { margin-top: 0; color: #FF8A00; font-size: 18px; margin-bottom: 5px; }
-    p { font-size: 12px; color: #A1A1AA; margin-bottom: 15px; margin-top: 0; line-height: 1.4; }
-    label { font-size: 11px; font-weight: bold; color: #A1A1AA; margin-bottom: 4px; display: block; }
-    input { width: 100%; padding: 10px; box-sizing: border-box; background: #18181b; border: 1px solid #3f3f46; color: white; border-radius: 8px; font-size: 12px; outline: none; margin-bottom: 15px; }
+    body { font-family: 'Inter', 'Segoe UI', sans-serif; width: 340px; padding: 0; background: #050505; color: #FFFFFF; margin: 0; }
+    .header { padding: 16px; background: #0A0A0C; border-bottom: 1px solid #1A1A1D; display: flex; justify-content: space-between; align-items: center; }
+    .header h3 { margin: 0; color: #FF8A00; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+    .header .status-dot { width: 8px; height: 8px; background: #10B981; border-radius: 50%; box-shadow: 0 0 8px rgba(16,185,129,0.6); }
+    
+    .container { padding: 16px; }
+    
+    /* Login Section */
+    #loginSection { display: none; }
+    label { font-size: 12px; font-weight: 600; color: #A1A1AA; margin-bottom: 6px; display: block; }
+    input { width: 100%; padding: 12px; box-sizing: border-box; background: #18181B; border: 1px solid #27272A; color: white; border-radius: 8px; font-size: 13px; outline: none; margin-bottom: 16px; transition: border-color 0.2s; }
     input:focus { border-color: #FF8A00; }
-    button { width: 100%; padding: 10px; background: #FF8A00; color: #09090B; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 13px; transition: background 0.2s; }
-    button:hover { background: #ea580c; }
-    .status { margin-top: 12px; font-size: 12px; font-weight: bold; color: #34d399; display: none; text-align: center; }
+    button.primary { width: 100%; padding: 12px; background: linear-gradient(to right, #F97316, #F59E0B); color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; font-size: 14px; transition: transform 0.2s; }
+    button.primary:hover { transform: scale(1.02); }
+    
+    /* Dashboard Section */
+    #dashboardSection { display: none; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .stat-card { background: #111113; border: 1px solid #27272A; border-radius: 10px; padding: 12px; text-align: center; }
+    .stat-card .value { font-size: 24px; font-weight: 800; color: #FFFFFF; }
+    .stat-card .label { font-size: 11px; color: #A1A1AA; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
+    
+    .difficulty-bar { display: flex; width: 100%; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 12px; }
+    .diff-easy { background: #10B981; width: 33%; }
+    .diff-medium { background: #F59E0B; width: 33%; }
+    .diff-hard { background: #EF4444; width: 34%; }
+    .diff-labels { display: flex; justify-content: space-between; font-size: 10px; color: #A1A1AA; margin-top: 6px; }
+    
+    .activity-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 1px solid #27272A; }
+    .activity-title { font-size: 13px; font-weight: 600; }
+    .activity-time { font-size: 11px; color: #A1A1AA; }
+    
+    .footer { margin-top: 16px; text-align: center; font-size: 11px; color: #52525B; }
+    .logout-btn { background: none; border: none; color: #EF4444; font-size: 12px; cursor: pointer; text-decoration: underline; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <h3>Codeyx Sync</h3>
-  <p>Link your account to auto-track submissions.</p>
-  
-  <label for="userIdInput">Codeyx User ID</label>
-  <input type="text" id="userIdInput" placeholder="e.g. user_2xyz..." />
-  
-  <button id="saveBtn">Save Settings</button>
-  <div id="statusMsg" class="status">Saved Successfully!</div>
-  
+  <div class="header">
+    <h3>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+      Codeyx Sync
+    </h3>
+    <div class="status-dot" title="Running"></div>
+  </div>
+
+  <div class="container">
+    <!-- Login Section -->
+    <div id="loginSection">
+      <p style="font-size: 13px; color: #A1A1AA; margin-bottom: 20px;">Connect your Codeyx account to track coding activity across LeetCode, CodeChef, and more.</p>
+      <label for="userIdInput">Codeyx User ID</label>
+      <input type="text" id="userIdInput" placeholder="e.g. user_2xyz123abc..." />
+      <button class="primary" id="saveBtn">Connect Account</button>
+      <p id="errorMsg" style="color: #EF4444; font-size: 12px; display: none; margin-top: 10px;"></p>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div id="dashboardSection">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="value" id="statProblems">0</div>
+          <div class="label">Problems</div>
+        </div>
+        <div class="stat-card">
+          <div class="value" id="statStreak">0 🔥</div>
+          <div class="label">Streak</div>
+        </div>
+      </div>
+
+      <div style="background: #111113; border: 1px solid #27272A; border-radius: 10px; padding: 12px; margin-bottom: 16px;">
+        <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Platform Breakdown</div>
+        <div id="platformBreakdownContainer" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+          <!-- Platform stats injected here -->
+          <div style="font-size: 11px; color:#A1A1AA;">Waiting for stats...</div>
+        </div>
+      </div>
+
+      <div style="background: #111113; border: 1px solid #27272A; border-radius: 10px; padding: 12px; max-height: 150px; overflow-y: auto;">
+        <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; position: sticky; top: -12px; background: #111113; padding: 4px 0; border-bottom: 1px solid #27272A; z-index: 2;">Unified Timeline</div>
+        <div id="timelineContainer">
+          <!-- Timeline items will be injected here -->
+          <div class="activity-row" style="border-top: none; padding-top: 0;">
+            <div class="activity-title" style="color:#A1A1AA;">Waiting for activity...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        Auto-syncing in background • <span id="lastSyncedText">Synced just now</span><br/>
+        <button class="logout-btn" id="logoutBtn">Disconnect Account</button>
+      </div>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

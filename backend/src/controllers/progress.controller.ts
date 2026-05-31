@@ -14,28 +14,25 @@ import { ApiResponse } from '../utils/ApiResponse';
 // ---------------------------------------------------------------------------
 const getSolvedCountsByStep = async (
   userId: string,
-  stepIds: mongoose.Types.ObjectId[]
+  stepIds: mongoose.Types.ObjectId[],
+  sheetProblems: any[]
 ): Promise<Map<string, number>> => {
-  const result = await UserProgress.aggregate([
-    {
-      $match: {
-        userId,
-        stepId: { $in: stepIds },
-        solved: true,
-      },
-    },
-    {
-      $group: {
-        _id: '$stepId',
-        count: { $sum: 1 },
-      },
-    },
-  ]);
+  const sheetProblemIds = sheetProblems.map((p) => p.masterProblemId);
+  const solvedDocs = await UserProgress.find(
+    { userId, problemId: { $in: sheetProblemIds }, solved: true },
+    { problemId: 1, _id: 0 }
+  ).lean();
 
+  const solvedSet = new Set(solvedDocs.map((doc) => doc.problemId));
   const map = new Map<string, number>();
-  for (const row of result) {
-    map.set(row._id.toString(), row.count);
+
+  for (const sp of sheetProblems) {
+    if (solvedSet.has(sp.masterProblemId)) {
+      const stepIdStr = sp.stepId.toString();
+      map.set(stepIdStr, (map.get(stepIdStr) || 0) + 1);
+    }
   }
+
   return map;
 };
 
@@ -344,7 +341,7 @@ export const getSheetProgress = async (req: Request, res: Response) => {
     const revisionCount = revisionAgg[0]?.revisionCount || 0;
 
     // --- Single aggregation for per-step solved counts (N+1 fix) ---
-    const solvedByStepMap = await getSolvedCountsByStep(userId, stepIds);
+    const solvedByStepMap = await getSolvedCountsByStep(userId, stepIds, sheetProblems);
 
     const stepsWithProgress = steps.map((step) => {
       const solvedInStep = solvedByStepMap.get(step._id.toString()) || 0;
@@ -452,7 +449,7 @@ export const getSheetBySlug = async (req: Request, res: Response) => {
     const revisionCount = revisionAgg[0]?.revisionCount || 0;
 
     // --- Per-step solved counts — single aggregation (N+1 fix) ---
-    const solvedByStepMap = await getSolvedCountsByStep(userId, stepIds);
+    const solvedByStepMap = await getSolvedCountsByStep(userId, stepIds, sheetProblems);
 
     const stepsWithProgress = steps.map((step) => {
       const solvedInStep = solvedByStepMap.get(step._id.toString()) || 0;
@@ -782,39 +779,154 @@ export const extensionSync = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Missing userId or slug' });
     }
 
-    // Find the MasterProblem by matching the slug in the link
-    const masterProblem = await MasterProblem.findOne({ link: { $regex: slug, $options: 'i' } });
+    // Make search extremely robust for DSA sheets (handle hyphens vs spaces, GeeksForGeeks links, etc)
+    const titleSlug = slug.replace(/-/g, ' '); // e.g. "fruit into baskets"
+    const regexTitle = new RegExp(titleSlug, 'i');
     
-    if (!masterProblem) {
-      return res.status(404).json({ success: false, message: 'Problem not found in Codeyx database' });
-    }
+    const masterProblem = await MasterProblem.findOne({
+      $or: [
+        { titleKey: slug },
+        { titleKey: { $regex: slug, $options: 'i' } },
+        { title: { $regex: regexTitle } },
+        { link: { $regex: slug, $options: 'i' } },
+        { 'links.leetcode': { $regex: slug, $options: 'i' } },
+        { 'links.geeksforgeeks': { $regex: slug, $options: 'i' } },
+        { 'links.codingninjas': { $regex: slug, $options: 'i' } },
+        { 'links.codeforces': { $regex: slug, $options: 'i' } },
+        { 'links.codechef': { $regex: slug, $options: 'i' } },
+        { 'links.hackerrank': { $regex: slug, $options: 'i' } },
+        { 'links.interviewbit': { $regex: slug, $options: 'i' } }
+      ]
+    });
+    
+    // 1. Check if they have ever solved this specific problem on THIS specific platform
+    const activityTitle = masterProblem 
+        ? `Solved ${masterProblem.title} on ${platform} via Extension`
+        : `Solved ${slug} on ${platform} via Extension`;
 
-    const existingProgress = await UserProgress.findOne({ userId, problemId: masterProblem.problemId });
-    const isNewSolve = !existingProgress || !existingProgress.solved;
+    const existingPlatformActivity = await UserActivity.findOne({ 
+        userId, 
+        type: 'solved_problem', 
+        title: activityTitle 
+    });
+    
+    const isPlatformSolveNew = !existingPlatformActivity;
 
-    if (isNewSolve) {
-        await UserProgress.updateOne(
-          { userId, problemId: masterProblem.problemId },
-          { $set: { solved: true, solvedAt: new Date() } },
-          { upsert: true }
-        );
-
-        await PlatformStats.findOneAndUpdate(
-          { userId, platform: 'codeyx' },
-          { $inc: { totalSolved: 1 }, $setOnInsert: { username: userId, stats: {}, rating: 0 } },
-          { upsert: true }
-        );
-        
+    if (isPlatformSolveNew) {
         await UserActivity.create({
-          userId,
-          type: 'solved_problem',
-          title: `Solved ${masterProblem.title} via Extension`,
-          problemId: masterProblem.problemId
+            userId,
+            type: 'solved_problem',
+            title: activityTitle,
+            problemId: masterProblem ? masterProblem.problemId : undefined
         });
     }
+
+    // 2. If it's a Codeyx Sheet problem, update the global sheet progress
+    if (masterProblem) {
+        const existingProgress = await UserProgress.findOne({ userId, problemId: masterProblem.problemId });
+        const isSheetProgressNew = !existingProgress || !existingProgress.solved;
+
+        if (isSheetProgressNew) {
+            await UserProgress.updateOne(
+              { userId, problemId: masterProblem.problemId },
+              { $set: { solved: true, solvedAt: new Date() } },
+              { upsert: true }
+            );
+        }
+    }
+
+    // --- AUTO-HEAL PLATFORM STATS ---
+    // Instead of relying on manual fixes, we auto-recalculate total solved based on UserActivity
+    const trueSolvedCount = await UserActivity.countDocuments({ userId, type: 'solved_problem' });
+    
+    await PlatformStats.findOneAndUpdate(
+        { userId, platform: 'codeyx' },
+        { $set: { username: userId, totalSolved: trueSolvedCount }, $setOnInsert: { stats: {}, rating: 0 } },
+        { upsert: true }
+    );
+    await PlatformStats.findOneAndUpdate(
+        { userId, platform: platform },
+        { $set: { username: userId, totalSolved: trueSolvedCount }, $setOnInsert: { stats: {}, rating: 0 } },
+        { upsert: true }
+    );
 
     return res.status(200).json({ success: true, message: 'Synced successfully' });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const manualSyncFix = async (req: Request, res: Response) => {
+  try {
+    const userIdRaw = req.query.userId;
+    if (!userIdRaw) return res.status(400).json({ success: false, message: 'Missing userId query param' });
+    const userId = userIdRaw as string;
+
+    const activities = await UserActivity.find({ userId, type: 'solved_problem' });
+    const codeyxActivityCount = activities.length;
+    
+    await PlatformStats.findOneAndUpdate(
+        { userId, platform: 'codeyx' },
+        { $set: { totalSolved: codeyxActivityCount, username: userId } },
+        { upsert: true }
+    );
+    await PlatformStats.findOneAndUpdate(
+        { userId, platform: 'leetcode' },
+        { $set: { totalSolved: codeyxActivityCount, username: userId } },
+        { upsert: true }
+    );
+    
+    // Auto-heal UserProgress
+    let healedCount = 0;
+    for (const act of activities) {
+        const match = act.title.match(/Solved ([\w-]+) on leetcode via Extension/);
+        if (match && match[1]) {
+            const slug = match[1];
+            const titleSlug = slug.replace(/-/g, ' ');
+            const regexTitle = new RegExp(titleSlug, 'i');
+            
+            const masterProblem = await MasterProblem.findOne({
+                $or: [
+                    { titleKey: slug },
+                    { titleKey: { $regex: slug, $options: 'i' } },
+                    { title: { $regex: regexTitle } },
+                    { link: { $regex: slug, $options: 'i' } }
+                ]
+            });
+            
+            if (masterProblem) {
+                await UserProgress.updateOne(
+                    { userId, problemId: masterProblem.problemId },
+                    { $set: { solved: true, solvedAt: act.createdAt } },
+                    { upsert: true }
+                );
+                healedCount++;
+            }
+        }
+    }
+
+    return res.status(200).json({ success: true, count: codeyxActivityCount, healedProgress: healedCount });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const debugMasterProblem = async (req: Request, res: Response) => {
+  try {
+    const title = req.query.title as string;
+    if (!title) return res.status(400).json({ success: false, message: 'Missing title' });
+    const mp = await MasterProblem.find({ title: { $regex: new RegExp(title, 'i') } });
+    return res.json({ success: true, count: mp.length, data: mp });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const debugActivities = async (req: Request, res: Response) => {
+  try {
+    const acts = await UserActivity.find({ type: 'solved_problem' }).lean();
+    return res.json({ success: true, count: acts.length, data: acts });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

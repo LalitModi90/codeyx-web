@@ -9,6 +9,7 @@ function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
     let totalSolved = 0;
     let combinedRating = 0;
     let contestsCount = 0;
+    let highestStreak = 0;
     const platformBreakdown: Record<string, { rating: number; solved: number; contests: number }> = {};
 
     userStats.forEach((s: any) => {
@@ -16,8 +17,12 @@ function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
         const pSolved  = s.totalSolved || 0;
         let   pContests = 0;
 
-        totalSolved     += pSolved;
-        combinedRating  += pRating;
+        // We only sum up specific external platforms for totalSolved/combinedRating to avoid double counting
+        // since 'codeyx' platform tracks the aggregate overall platform activity.
+        if (s.platform !== 'codeyx' && s.platform !== 'github') {
+            totalSolved     += pSolved;
+            combinedRating  += pRating;
+        }
 
         if (s.stats) {
             if (s.platform === 'leetcode') {
@@ -32,6 +37,10 @@ function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
             }
             else if (s.platform === 'codeforces' && s.stats.ratingCount)    pContests = s.stats.ratingCount;
             else if (s.platform === 'codechef'   && s.stats.contests)       pContests = Array.isArray(s.stats.contests) ? s.stats.contests.length : (parseInt(s.stats.contests) || 0);
+            
+            if (s.stats.streak && s.stats.streak > highestStreak) {
+                highestStreak = s.stats.streak;
+            }
         }
         contestsCount += pContests;
 
@@ -84,7 +93,8 @@ function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
     const accuracy       = Math.min(100, Math.round((accuracyScore / 10) * 100));
     const consistency    = Math.min(100, Math.round((consistencyScore / 3) * 100));
 
-    const hasConnected = Object.keys(platformBreakdown).length > 0;
+    const externalPlatforms = Object.keys(platformBreakdown).filter(p => p !== 'codeyx');
+    const hasConnected = externalPlatforms.length > 0;
     const hasData      = hasConnected && (totalSolved > 0 || combinedRating > 0);
 
     // Friendly display name: prioritize Mongoose profile name, fallback to Clerk
@@ -109,6 +119,7 @@ function buildUserEntry(clerkUser: any, userStats: any[], userProfile?: any) {
         rating:    codeyxScore,
         rawCombinedRating: combinedRating,
         problems:  totalSolved,
+        streak:    highestStreak,
         contests:  contestsCount,
         winRate:   totalSolved > 0 ? Math.min(85, Math.round(50 + (totalSolved / 100))) : 0,
         avatarUrl,

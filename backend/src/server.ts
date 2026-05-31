@@ -53,6 +53,46 @@ initializeSocket(httpServer);
 // Connect to Database
 connectDB();
 
+import { PlatformStats } from './models/platformStats.model';
+import { UserActivity } from './models/UserActivity';
+import { UserProgress } from './models/UserProgress';
+import { MasterProblem } from './models/MasterProblem';
+
+setTimeout(async () => {
+    try {
+        const wrongId = 'Laitmodi';
+        const rightId = 'user_3EOG2Gt8xauudBD5yxKSHpz381G';
+        
+        console.log('[MIGRATION] Starting migration from Laitmodi to ' + rightId);
+        
+        // 1. Migrate UserActivity
+        const actUpdate = await UserActivity.updateMany({ userId: wrongId }, { $set: { userId: rightId } });
+        console.log(`[MIGRATION] Migrated ${actUpdate.modifiedCount} activities.`);
+        
+        // 2. Migrate UserProgress
+        const progUpdate = await UserProgress.updateMany({ userId: wrongId }, { $set: { userId: rightId } });
+        console.log(`[MIGRATION] Migrated ${progUpdate.modifiedCount} progress items.`);
+        
+        // 3. Recalculate Stats for Right ID
+        const finalActivities = await UserActivity.find({ userId: rightId, type: 'solved_problem' });
+        
+        await PlatformStats.findOneAndUpdate(
+            { userId: rightId, platform: 'codeyx' },
+            { $set: { totalSolved: finalActivities.length, username: rightId } },
+            { upsert: true }
+        );
+        await PlatformStats.findOneAndUpdate(
+            { userId: rightId, platform: 'leetcode' },
+            { $set: { totalSolved: finalActivities.length, username: rightId } },
+            { upsert: true }
+        );
+        
+        console.log(`[MIGRATION] Complete! Total Solved for right ID is now ${finalActivities.length}`);
+    } catch (err) {
+        console.error('[MIGRATION ERROR]', err);
+    }
+}, 3000);
+
 
 // Initialize UPSTASH/Mongo Cron Background Sync
 if (process.env.NODE_ENV === 'production') {
@@ -99,9 +139,23 @@ app.use(morgan('dev'));
 // Prevent HTTP parameter pollution
 app.use(hpp());
 
-// CORS setup for Frontend
+// CORS setup for Frontend and Chrome Extension
 app.use(cors({
-  origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'http://localhost:3001'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, or extension background scripts)
+    if (!origin) return callback(null, true);
+    
+    // Allow frontend localhost, production URLs, and chrome extensions
+    if (
+      origin.startsWith('http://localhost') || 
+      origin.startsWith('http://127.0.0.1') ||
+      origin.startsWith('chrome-extension://') ||
+      origin === process.env.FRONTEND_URL
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
   credentials: true,
 }));
 
@@ -136,7 +190,7 @@ app.use('/api', swaggerRoutes);
 app.use(errorHandler);
 
 // Start Server using httpServer instead of app
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT as number, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
 
@@ -152,3 +206,4 @@ const gracefulShutdown = (signal: string) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
+// Trigger nodemon restart 13

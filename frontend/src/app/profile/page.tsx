@@ -658,7 +658,10 @@ export default function PublicProfilePage() {
                    title: b,
                    desc: `Earned on ${platformId}`,
                    time: 'Recent',
-                   platform: platformId
+                   platform: platformId,
+                   icon: Trophy,
+                   bg: 'bg-orange-500/10',
+                   color: 'text-orange-500'
                 });
               });
             }
@@ -1955,7 +1958,7 @@ export default function PublicProfilePage() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 scrollbar-thin flex flex-col gap-4">
-                {achievementsData.map((ach, idx) => (
+                {achievementsList.map((ach, idx) => (
                   <div key={idx} className="flex items-center gap-4 bg-gray-50 dark:bg-[#1A1A1D] border border-gray-200 dark:border-white/5 p-4 rounded-xl hover:border-gray-300 dark:hover:border-white/10 transition-colors">
                     <div className={`w-12 h-12 rounded-2xl ${ach.bg} border border-gray-200 dark:border-white/5 flex items-center justify-center shrink-0`}>
                       <ach.icon className={ach.color} size={20} />

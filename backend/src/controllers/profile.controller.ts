@@ -64,7 +64,7 @@ export const updateProfile = async (req: Request, res: Response) => {
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     
     // Check Cache First
     const cached = await redisClient.get(`profile:${userId}`);
@@ -72,7 +72,12 @@ export const getProfile = async (req: Request, res: Response) => {
       return res.status(200).json(new ApiResponse(200, JSON.parse(cached), 'Fetched profile (cache)'));
     }
 
-    const profile = await Profile.findOne({ userId });
+    let profile;
+    if (typeof userId === 'string' && userId.startsWith('user_')) {
+      profile = await Profile.findOne({ userId });
+    } else {
+      profile = await Profile.findOne({ username: { $regex: new RegExp(`^${userId}$`, 'i') } });
+    }
     
     if (profile) {
       await redisClient.set(`profile:${userId}`, JSON.stringify(profile), 'EX', 3600); // 1 hour TTL
