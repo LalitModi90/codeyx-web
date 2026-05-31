@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, RefreshCw, Flame, Trophy, Award, Star } from 'lucide-react';
+import { Sparkles, RefreshCw, Flame, Trophy } from 'lucide-react';
 
 interface ProfileHeaderProps {
   username: string;
@@ -79,7 +79,7 @@ export default function ProfileHeader({
     <motion.header
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`p-6 rounded-2xl border ${brandColors.card} relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)]`}
+      className={`p-6 rounded-2xl border ${brandColors.card} relative overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]`}
       style={{
         boxShadow: `0 0 30px ${brandColors.orange}0d`
       }}
@@ -110,7 +110,7 @@ export default function ProfileHeader({
 
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-black tracking-tight text-white">{realName}</h1>
+              <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">{realName}</h1>
               <div 
                 className="flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-widest border"
                 style={{ 
@@ -123,15 +123,15 @@ export default function ProfileHeader({
                 <span>Connected</span>
               </div>
             </div>
-            <p className="text-xs text-gray-400 font-medium mt-1">
-              {platformName} Handle: <span className="font-bold text-white">@{username}</span>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mt-1">
+              {platformName} Handle: <span className="font-bold text-gray-900 dark:text-white">@{username}</span>
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Sync:</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Sync:</span>
               <button 
                 onClick={onSync}
                 disabled={syncing}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/[0.04] border border-white/5 hover:bg-white/[0.08] text-gray-400 hover:text-white transition-all text-[9px] font-bold"
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/5 dark:bg-white/[0.04] border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/[0.08] text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-all text-[9px] font-bold"
               >
                 <RefreshCw className={`w-2.5 h-2.5 ${syncing ? 'animate-spin' : ''}`} />
                 <span>{syncing ? 'Syncing...' : 'Sync Now'}</span>
@@ -140,21 +140,21 @@ export default function ProfileHeader({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/[0.02] border border-white/5 rounded-2xl p-4">
-          <div className="flex flex-col pr-4 sm:border-r border-white/5">
-            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl p-4">
+          <div className="flex flex-col pr-4 sm:border-r border-black/5 dark:border-white/5">
+            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-none mb-1">
               {platformName === 'GeeksforGeeks' ? 'Institute Rank' : 'Global Rank'}
             </span>
-            <span className="text-lg font-black tracking-tight text-white font-mono">
+            <span className="text-lg font-black tracking-tight text-gray-900 dark:text-white font-mono">
               #<AnimatedCounter value={globalRank} />
             </span>
-            <span className="text-[8px] font-semibold text-gray-500 mt-1">
+            <span className="text-[8px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
               {platformName === 'GeeksforGeeks' ? 'GFG Campus Rank' : `${platformName} Rank`}
             </span>
           </div>
 
-          <div className="flex flex-col px-1 sm:px-4 sm:border-r border-white/5">
-            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-1">
+          <div className="flex flex-col px-1 sm:px-4 sm:border-r border-black/5 dark:border-white/5">
+            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-none mb-1">
               {platformName === 'GeeksforGeeks' ? 'Coding Score' : 'Rating'}
             </span>
             <span className="text-lg font-black tracking-tight" style={{ color: brandColors.orange }}>
@@ -166,12 +166,12 @@ export default function ProfileHeader({
           </div>
 
           <div className="flex flex-col pl-4">
-            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none mb-1">Solved Problems</span>
-            <span className="text-lg font-black text-white tracking-tight flex items-center gap-1.5 font-mono">
+            <span className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest leading-none mb-1">Solved Problems</span>
+            <span className="text-lg font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-1.5 font-mono">
               <Trophy className="w-4 h-4" style={{ color: brandColors.orange }} />
               <span><AnimatedCounter value={solvedCount} /></span>
             </span>
-            <span className="text-[8px] font-semibold text-emerald-400 mt-1">Total Solved Count</span>
+            <span className="text-[8px] font-semibold text-emerald-500 dark:text-emerald-400 mt-1">Total Solved Count</span>
           </div>
         </div>
       </div>

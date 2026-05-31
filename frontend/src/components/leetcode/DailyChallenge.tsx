@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, CheckCircle2, Clock, Zap, ExternalLink, HelpCircle, ChevronDown, Award, Lightbulb } from 'lucide-react';
+import { Flame, CheckCircle2, Clock, Zap, ExternalLink, ChevronDown, Award, Lightbulb } from 'lucide-react';
 
 interface DailyChallengeProps {
   challengeTitle?: string;
@@ -86,7 +86,7 @@ export default function DailyChallenge({
   }, [challengeTitle, platformName]);
 
   return (
-    <div className={`p-6 rounded-2xl border ${brandColors.card} shadow-lg relative overflow-hidden h-full flex flex-col justify-between min-h-[360px]`}>
+    <div className={`p-6 rounded-2xl border ${brandColors.card} shadow-lg relative overflow-hidden h-full flex flex-col justify-between min-h-[360px] transition-all duration-300`}>
       <div 
         className="absolute top-0 right-0 w-32 h-32 blur-2xl rounded-full pointer-events-none" 
         style={{ background: `radial-gradient(circle at 100% 0%, ${brandColors.orange}1a, transparent)` }}
@@ -107,7 +107,7 @@ export default function DailyChallenge({
             <span>Daily Challenge</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-gray-400">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-gray-500 dark:text-gray-400">
             <Clock size={11} className="text-gray-500" />
             <span className="font-mono">{timeLeft}</span>
           </div>
@@ -115,7 +115,7 @@ export default function DailyChallenge({
 
         {/* Title and Difficulty Block */}
         <div className="space-y-2">
-          <h4 className="font-black text-base text-white tracking-wide leading-tight">{challengeTitle}</h4>
+          <h4 className="font-black text-base text-gray-900 dark:text-white tracking-wide leading-tight">{challengeTitle}</h4>
           
           <div className="flex flex-wrap items-center gap-2">
             <span 
@@ -129,14 +129,14 @@ export default function DailyChallenge({
               {difficulty}
             </span>
 
-            <span className="text-[9px] text-gray-500 font-bold flex items-center gap-0.5">
+            <span className="text-[9px] text-gray-500 dark:text-gray-400 font-bold flex items-center gap-0.5">
               <Zap size={10} style={{ color: brandColors.orange }} />
               <span>+{rewardPoints} Points</span>
             </span>
 
-            <span className="text-[9px] text-gray-500 font-bold">•</span>
+            <span className="text-[9px] text-gray-500 dark:text-gray-400 font-bold">•</span>
 
-            <span className="text-[9px] text-gray-400 font-bold">
+            <span className="text-[9px] text-gray-600 dark:text-gray-400 font-bold">
               Acceptance: {challengeMeta.acceptance}
             </span>
           </div>
@@ -144,12 +144,12 @@ export default function DailyChallenge({
 
         {/* Dynamic Topic Tags */}
         <div className="pt-1">
-          <div className="text-[8px] font-black uppercase text-gray-500 tracking-wider mb-1.5">Topic Focus</div>
+          <div className="text-[8px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider mb-1.5">Topic Focus</div>
           <div className="flex flex-wrap gap-1.5">
             {challengeMeta.tags.map((tag, idx) => (
               <span 
                 key={idx} 
-                className="px-2 py-0.5 rounded-md bg-white/[0.02] border border-white/5 hover:border-orange-500/20 text-gray-300 text-[9px] font-semibold transition-all cursor-default"
+                className="px-2 py-0.5 rounded-md bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 hover:border-orange-500/20 text-gray-700 dark:text-gray-300 text-[9px] font-bold transition-all cursor-default"
               >
                 {tag}
               </span>
@@ -161,15 +161,15 @@ export default function DailyChallenge({
         <div className="pt-2">
           <button 
             onClick={() => setShowHint(!showHint)}
-            className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all text-left group"
+            className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all text-left group"
           >
-            <div className="flex items-center gap-1.5 text-gray-400 group-hover:text-white transition-colors text-[9px] font-black uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors text-[9px] font-black uppercase tracking-wider">
               <Lightbulb size={11} style={{ color: brandColors.orange }} />
               <span>AI Prep Hint</span>
             </div>
             <ChevronDown 
               size={12} 
-              className={`text-gray-500 group-hover:text-white transition-transform duration-300 ${showHint ? 'rotate-180' : ''}`} 
+              className={`text-gray-500 group-hover:text-black dark:group-hover:text-white transition-transform duration-300 ${showHint ? 'rotate-180' : ''}`} 
             />
           </button>
 
@@ -182,10 +182,10 @@ export default function DailyChallenge({
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="mt-2 p-3 rounded-xl bg-[#090C1B] border border-white/[0.04] text-[10px] text-gray-400 space-y-2 leading-relaxed">
+                <div className="mt-2 p-3 rounded-xl bg-emerald-500/5 dark:bg-[#090C1B] border border-black/5 dark:border-white/[0.04] text-[10px] text-gray-700 dark:text-gray-400 space-y-2 leading-relaxed font-semibold">
                   <p>{challengeMeta.hint}</p>
                   <div 
-                    className="flex items-center justify-between text-[8px] font-black uppercase tracking-wider pt-1 border-t border-white/[0.03]"
+                    className="flex items-center justify-between text-[8px] font-black uppercase tracking-wider pt-1 border-t border-black/5 dark:border-white/[0.03]"
                     style={{ color: brandColors.orange }}
                   >
                     <span>Target Complexity</span>
@@ -199,7 +199,7 @@ export default function DailyChallenge({
 
         {/* Streak bonus announcement */}
         <div 
-          className="p-2.5 rounded-xl border-l text-[9px] text-gray-400 flex items-center gap-2"
+          className="p-2.5 rounded-xl border-l text-[9px] text-gray-600 dark:text-gray-400 flex items-center gap-2 font-bold"
           style={{ 
             borderLeftColor: brandColors.orange,
             backgroundImage: `linear-gradient(to right, ${brandColors.orange}0c, transparent)`
@@ -211,14 +211,14 @@ export default function DailyChallenge({
       </div>
 
       {/* Bottom Footer Actions */}
-      <div className="border-t border-white/[0.03] pt-4 mt-4 flex justify-between items-center gap-4">
+      <div className="border-t border-black/5 dark:border-white/[0.03] pt-4 mt-4 flex justify-between items-center gap-4">
         <div className="flex items-center gap-1.5">
           <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors ${
-            completed ? 'bg-emerald-500/10 border-emerald-500/20 text-[#10B981]' : 'bg-white/[0.02] border-white/5 text-gray-500'
+            completed ? 'bg-emerald-500/10 border-emerald-500/20 text-[#10B981]' : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/5 dark:border-white/5 text-gray-500'
           }`}>
             <CheckCircle2 size={12} />
           </div>
-          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+          <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">
             {completed ? 'Completed' : 'Pending solve'}
           </span>
         </div>

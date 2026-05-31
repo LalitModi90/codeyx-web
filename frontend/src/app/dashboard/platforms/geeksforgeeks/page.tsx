@@ -10,11 +10,31 @@ import DailyChallenge from '../../../../components/leetcode/DailyChallenge';
 import PerformanceInsights from '../../../../components/leetcode/PerformanceInsights';
 import ActivityHeatmap from '../../../../components/leetcode/ActivityHeatmap';
 
-import { Flame, RefreshCw, Sparkles } from 'lucide-react';
+import { Flame, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 // Custom GFG 5-Level Difficulty Breakdown Chart
-function GfgDifficultyChart({ school = 0, basic = 0, easy = 0, medium = 0, hard = 0, total = 0 }) {
+interface GfgDifficultyChartProps {
+  school?: number;
+  basic?: number;
+  easy?: number;
+  medium?: number;
+  hard?: number;
+  total?: number;
+  isLight?: boolean;
+  brandColors?: any;
+}
+
+function GfgDifficultyChart({ 
+  school = 0, 
+  basic = 0, 
+  easy = 0, 
+  medium = 0, 
+  hard = 0, 
+  total = 0,
+  isLight = false,
+  brandColors = {} as any
+}: GfgDifficultyChartProps) {
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
   const data = [
@@ -26,11 +46,15 @@ function GfgDifficultyChart({ school = 0, basic = 0, easy = 0, medium = 0, hard 
   ].filter(d => d.value > 0);
 
   return (
-    <div className="bg-[#06180c]/80 border border-[#2f8d46]/10 backdrop-blur-xl p-6 rounded-2xl flex flex-col justify-between h-[360px] shadow-lg relative overflow-hidden">
+    <div className={`${brandColors.card} p-6 rounded-2xl flex flex-col justify-between h-[360px] shadow-lg relative overflow-hidden transition-all duration-300`}>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="font-bold text-xs uppercase tracking-wider text-[#00E676]">Difficulty Breakdown</h3>
-          <p className="text-[10px] text-gray-500 mt-0.5">Problems solved by custom GFG category</p>
+          <h3 className="font-extrabold text-xs uppercase tracking-wider" style={{ color: brandColors.title }}>
+            Difficulty Breakdown
+          </h3>
+          <p className={`text-[10px] ${brandColors.textMuted} mt-0.5 font-bold`}>
+            Problems solved by custom GFG category
+          </p>
         </div>
       </div>
 
@@ -65,8 +89,8 @@ function GfgDifficultyChart({ school = 0, basic = 0, easy = 0, medium = 0, hard 
                   if (active && payload && payload.length) {
                     const d = payload[0].payload;
                     return (
-                      <div className="bg-[#06180c] border border-[#2f8d46]/20 p-2.5 rounded-xl text-[10px] text-white">
-                        <span className="font-bold" style={{ color: d.fill }}>{d.name}</span>: {d.value} solved
+                      <div className={`${isLight ? 'bg-white border-[#2f8d46]/20 text-[#0a230f]' : 'bg-[#06180c] border-[#2f8d46]/20 text-white'} border p-2.5 rounded-xl text-[10px] shadow-md font-bold`}>
+                        <span style={{ color: d.fill }}>{d.name}</span>: {d.value} solved
                       </div>
                     );
                   }
@@ -77,8 +101,8 @@ function GfgDifficultyChart({ school = 0, basic = 0, easy = 0, medium = 0, hard 
           </ResponsiveContainer>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-            <span className="text-2xl font-black tracking-tight text-white">{total}</span>
-            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Solved</span>
+            <span className={`text-2xl font-black tracking-tight ${brandColors.textMain}`}>{total}</span>
+            <span className={`text-[8px] font-bold ${brandColors.textMuted} uppercase tracking-widest`}>Solved</span>
           </div>
         </div>
 
@@ -96,13 +120,13 @@ function GfgDifficultyChart({ school = 0, basic = 0, easy = 0, medium = 0, hard 
                 <div className="flex justify-between items-center text-[10px] font-bold">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.fill }} />
-                    <span className="text-gray-300">{d.name}</span>
+                    <span className={brandColors.textMain}>{d.name}</span>
                   </div>
-                  <span className="text-gray-400 font-mono">
-                    {d.value} <span className="text-gray-600 font-normal">({pct}%)</span>
+                  <span className={`${brandColors.textMain} font-mono`}>
+                    {d.value} <span className={`${isLight ? 'text-emerald-700' : 'text-gray-500'} font-normal`}>({pct}%)</span>
                   </span>
                 </div>
-                <div className="h-1.5 rounded-full bg-white/[0.03] overflow-hidden">
+                <div className={`h-1.5 rounded-full ${isLight ? 'bg-emerald-500/10' : 'bg-white/[0.03]'} overflow-hidden`}>
                   <motion.div 
                     className="h-full rounded-full"
                     style={{ backgroundColor: d.fill }}
@@ -121,56 +145,96 @@ function GfgDifficultyChart({ school = 0, basic = 0, easy = 0, medium = 0, hard 
 }
 
 // Custom GFG Streak & Metrics Card
-function GfgStreakCard({ monthlyScore = 0, correctSubmissions = 0, longestStreak = 0, currentStreak = 0, streakDays = 0, totalSolved = 0 }) {
+interface GfgStreakCardProps {
+  monthlyScore?: number;
+  correctSubmissions?: number;
+  longestStreak?: number;
+  currentStreak?: number;
+  streakDays?: number;
+  totalSolved?: number;
+  isLight?: boolean;
+  brandColors?: any;
+}
+
+function GfgStreakCard({ 
+  monthlyScore = 0, 
+  correctSubmissions = 0, 
+  longestStreak = 0, 
+  currentStreak = 0, 
+  streakDays = 0, 
+  totalSolved = 0,
+  isLight = false,
+  brandColors = {} as any
+}: GfgStreakCardProps) {
   return (
-    <div className="bg-[#06180c]/80 border border-[#2f8d46]/10 backdrop-blur-xl p-6 rounded-2xl shadow-lg flex flex-col justify-between h-[360px] relative overflow-hidden group">
+    <div className={`${brandColors.card} p-6 rounded-2xl shadow-lg flex flex-col justify-between h-[360px] relative overflow-hidden group transition-all duration-300`}>
       <div 
         className="absolute inset-0 pointer-events-none" 
-        style={{ background: `radial-gradient(circle at 100% 100%, #00E67608, transparent)` }}
+        style={{ background: isLight ? `radial-gradient(circle at 100% 100%, #2F8D460a, transparent)` : `radial-gradient(circle at 100% 100%, #00E67608, transparent)` }}
       />
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-500/5 to-transparent blur-2xl rounded-full pointer-events-none" />
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="font-bold text-xs uppercase tracking-wider text-[#00E676] flex items-center gap-1.5">
-              <Flame size={14} className="animate-pulse text-[#00E676]" />
+            <h3 className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5" style={{ color: brandColors.title }}>
+              <Flame size={14} className="animate-pulse" style={{ color: brandColors.orange }} />
               <span>GFG Streak & Metrics</span>
             </h3>
-            <p className="text-[10px] text-gray-500 mt-0.5">Legendary stats & Monthly performance</p>
+            <p className={`text-[10px] ${brandColors.textMuted} mt-0.5 font-bold`}>
+              Legendary stats & Monthly performance
+            </p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="p-3.5 rounded-xl bg-white/[0.01] border border-white/5 space-y-1">
-            <span className="text-[8px] font-black text-[#00E676] uppercase tracking-wider block">Monthly Score</span>
-            <p className="text-white font-extrabold text-base tracking-tight">{monthlyScore}</p>
-            <span className="text-[8px] text-gray-500 block">Active score points</span>
+          <div className={`${brandColors.subCard} p-3.5 rounded-xl border space-y-1 transition-all duration-300`}>
+            <span className="text-[8px] font-black uppercase tracking-wider block" style={{ color: brandColors.orange }}>
+              Monthly Score
+            </span>
+            <p className={`${brandColors.textMain} font-extrabold text-base tracking-tight`}>
+              {monthlyScore}
+            </p>
+            <span className={`text-[8px] ${brandColors.textMuted} font-bold block`}>
+              Active score points
+            </span>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-white/[0.01] border border-white/5 space-y-1">
-            <span className="text-[8px] font-black text-[#00E676] uppercase tracking-wider block">Correct Solves</span>
-            <p className="text-white font-extrabold text-base tracking-tight">{correctSubmissions || totalSolved}</p>
-            <span className="text-[8px] text-gray-500 block">Total positive verdicts</span>
+          <div className={`${brandColors.subCard} p-3.5 rounded-xl border space-y-1 transition-all duration-300`}>
+            <span className="text-[8px] font-black uppercase tracking-wider block" style={{ color: brandColors.orange }}>
+              Correct Solves
+            </span>
+            <p className={`${brandColors.textMain} font-extrabold text-base tracking-tight`}>
+              {correctSubmissions || totalSolved}
+            </p>
+            <span className={`text-[8px] ${brandColors.textMuted} font-bold block`}>
+              Total positive verdicts
+            </span>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
-            <Flame className="w-5 h-5 text-[#00E676] animate-bounce" />
+        <div className={`p-4 rounded-xl border ${isLight ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-emerald-500/20 bg-emerald-500/5'} flex items-center gap-3 transition-all duration-300`}>
+          <div className={`w-10 h-10 rounded-lg ${isLight ? 'bg-emerald-500/20' : 'bg-emerald-500/10'} flex items-center justify-center shrink-0 border border-emerald-500/20`}>
+            <Flame className="w-5 h-5 animate-bounce" style={{ color: brandColors.orange }} />
           </div>
           <div>
-            <span className="text-[8px] font-black text-[#00E676] uppercase tracking-widest block">Global Longest Streak</span>
-            <p className="text-white font-black text-sm">{longestStreak || streakDays || 0} Days</p>
-            <span className="text-[8px] text-gray-400 block mt-0.5 leading-tight">Top 0.1% of GeeksforGeeks global coders!</span>
+            <span className="text-[8px] font-black uppercase tracking-widest block" style={{ color: brandColors.orange }}>
+              Global Longest Streak
+            </span>
+            <p className={`${brandColors.textMain} font-black text-sm`}>
+              {longestStreak || streakDays || 0} Days
+            </p>
+            <span className={`text-[8px] ${brandColors.textMuted} font-bold block mt-0.5 leading-tight`}>
+              Top 0.1% of GeeksforGeeks global coders!
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-white/[0.03] pt-4 mt-2 flex justify-between items-center">
-        <span className="text-[9px] font-bold text-gray-400">Current active streak:</span>
-        <span className="text-[10px] font-black text-emerald-400 flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+      <div className={`border-t ${isLight ? 'border-emerald-500/10' : 'border-white/[0.03]'} pt-4 mt-2 flex justify-between items-center transition-all duration-300`}>
+        <span className={`text-[9px] font-extrabold ${brandColors.textMuted}`}>Current active streak:</span>
+        <span className="text-[10px] font-black flex items-center gap-1" style={{ color: brandColors.orange }}>
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" style={{ backgroundColor: brandColors.orange }} />
           {currentStreak || streakDays || 0} Days
         </span>
       </div>
@@ -180,6 +244,36 @@ function GfgStreakCard({ monthlyScore = 0, correctSubmissions = 0, longestStreak
 
 export default function GeeksforGeeksPage() {
   const { user } = useUser();
+  
+  // Real-time theme sync that reacts instantly to the TopNavbar toggling the 'dark' class on documentElement
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkTheme = () => {
+        setIsDarkMode(document.documentElement.classList.contains('dark'));
+      };
+      
+      checkTheme();
+
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'class') {
+            checkTheme();
+          }
+        });
+      });
+
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class']
+      });
+
+      return () => observer.disconnect();
+    }
+  }, []);
+
+  const isLight = !isDarkMode;
   
   const [lcHandle, setLcHandle] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -193,14 +287,33 @@ export default function GeeksforGeeksPage() {
   // MERN states
   const [lcData, setLcData] = useState<any>(null);
 
-  const brandColors = {
-    bg: 'bg-[#040f08]',
-    orange: '#2F8D46',
-    yellow: '#00E676',
-    accent: '#1B5E20',
-    accentGrad: 'from-[#2F8D46]/10 to-[#00E676]/5',
-    card: 'bg-[#06180c]/80 border-[#2f8d46]/10 backdrop-blur-xl',
-  };
+  const brandColors = React.useMemo(() => {
+    return isLight ? {
+      bg: 'bg-[#f4fbf6]', // Softest premium minty background wash
+      orange: '#2F8D46', // GFG Emerald Green
+      yellow: '#10b981', // Vivid green accent
+      accent: '#064e3b',
+      accentGrad: 'from-[#2F8D46]/10 to-[#10b981]/5',
+      card: 'bg-white/95 border-[#2f8d46]/15 shadow-[0_8px_30px_rgba(47,141,70,0.06)] backdrop-blur-xl',
+      textMain: 'text-[#0a2710]',
+      textMuted: 'text-[#2b5832]',
+      title: '#2F8D46',
+      subCard: 'bg-[#eefcf3] border-[#2f8d46]/10',
+      inputBg: 'bg-black/[0.02] border-black/10 focus:bg-black/[0.04] text-black focus:border-[#2f8d46]'
+    } : {
+      bg: 'bg-[#040f08]',
+      orange: '#2F8D46',
+      yellow: '#00E676',
+      accent: '#1B5E20',
+      accentGrad: 'from-[#2F8D46]/10 to-[#00E676]/5',
+      card: 'bg-[#06180c]/80 border-[#2f8d46]/10 backdrop-blur-xl',
+      textMain: 'text-white',
+      textMuted: 'text-gray-400',
+      title: '#00E676',
+      subCard: 'bg-white/[0.01] border-white/5',
+      inputBg: 'bg-white/[0.02] border-white/5 focus:bg-white/[0.04] text-white focus:border-[#00E676]'
+    };
+  }, [isLight]);
 
   const fetchLCData = async (userId: string) => {
     setLoading(true);
@@ -282,18 +395,22 @@ export default function GeeksforGeeksPage() {
   ];
 
   return (
-    <div className={`min-h-screen ${brandColors.bg} text-[var(--text-main)] font-sans selection:bg-emerald-500/30 pb-16 overflow-x-hidden relative`}>
+    <div className={`min-h-screen ${brandColors.bg} text-[var(--text-main)] font-sans selection:bg-emerald-500/30 pb-16 overflow-x-hidden relative transition-all duration-300`}>
       <div 
         className="absolute inset-0 pointer-events-none" 
         style={{
-          backgroundImage: `linear-gradient(to_right, ${brandColors.orange}03 1px, transparent 1px), linear-gradient(to_bottom, ${brandColors.orange}03 1px, transparent 1px)`,
+          backgroundImage: isLight 
+            ? `linear-gradient(to_right, ${brandColors.orange}05 1px, transparent 1px), linear-gradient(to_bottom, ${brandColors.orange}05 1px, transparent 1px)`
+            : `linear-gradient(to_right, ${brandColors.orange}03 1px, transparent 1px), linear-gradient(to_bottom, ${brandColors.orange}03 1px, transparent 1px)`,
           backgroundSize: '40px 40px'
         }}
       />
       <div 
         className="absolute top-0 left-1/4 w-[600px] h-[600px] blur-[180px] rounded-full pointer-events-none"
         style={{
-          background: `radial-gradient(circle, ${brandColors.orange}0d, transparent)`
+          background: isLight 
+            ? `radial-gradient(circle, ${brandColors.orange}07, transparent)`
+            : `radial-gradient(circle, ${brandColors.orange}0d, transparent)`
         }}
       />
       
@@ -316,7 +433,7 @@ export default function GeeksforGeeksPage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              className={`max-w-md w-full p-8 rounded-3xl border shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl relative overflow-hidden ${brandColors.card}`}
+              className={`max-w-md w-full p-8 rounded-3xl border shadow-lg backdrop-blur-xl relative overflow-hidden ${brandColors.card}`}
             >
               <div 
                 className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-2xl pointer-events-none" 
@@ -324,7 +441,7 @@ export default function GeeksforGeeksPage() {
               />
 
               <div 
-                className="w-20 h-20 border rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                className="w-20 h-20 border rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md"
                 style={{ 
                   backgroundColor: `${brandColors.orange}1a`, 
                   borderColor: `${brandColors.orange}33` 
@@ -333,8 +450,8 @@ export default function GeeksforGeeksPage() {
                 <Flame className="w-10 h-10" style={{ color: brandColors.orange }} />
               </div>
 
-              <h2 className="text-xl font-extrabold tracking-tight mb-2 text-white">Connect GeeksforGeeks</h2>
-              <p className="text-xs text-gray-400 mb-6 leading-relaxed">
+              <h2 className={`text-xl font-extrabold tracking-tight mb-2 ${brandColors.textMain}`}>Connect GeeksforGeeks</h2>
+              <p className={`text-xs ${brandColors.textMuted} mb-6 leading-relaxed font-semibold`}>
                 Connect your GeeksforGeeks profile to import problem solving percentages, streak badges, and active coding scores!
               </p>
 
@@ -344,14 +461,13 @@ export default function GeeksforGeeksPage() {
                   value={connectInput}
                   onChange={(e) => setConnectInput(e.target.value)}
                   placeholder="Enter GeeksforGeeks Handle"
-                  className="px-4 py-3 text-xs bg-white/[0.02] border border-white/5 rounded-xl focus:outline-none focus:bg-white/[0.04] text-center tracking-wider font-bold text-white transition-all"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+                  className={`px-4 py-3 text-xs border rounded-xl focus:outline-none text-center tracking-wider font-extrabold transition-all ${brandColors.inputBg}`}
                   required
                 />
                 <button
                   type="submit"
                   disabled={isConnecting}
-                  className="w-full py-3 text-xs font-black tracking-wider uppercase rounded-xl hover:opacity-90 shadow-md flex items-center justify-center gap-2 text-black transition-opacity font-sans"
+                  className="w-full py-3 text-xs font-black tracking-wider uppercase rounded-xl hover:opacity-90 shadow-md flex items-center justify-center gap-2 text-white transition-opacity font-sans"
                   style={{ 
                     background: `linear-gradient(to_right, ${brandColors.orange}, ${brandColors.yellow})`,
                     boxShadow: `0 4px 12px ${brandColors.orange}26`
@@ -404,6 +520,8 @@ export default function GeeksforGeeksPage() {
                     medium={mediumSolvedCount}
                     hard={hardSolvedCount}
                     total={totalSolved}
+                    isLight={isLight}
+                    brandColors={brandColors}
                   />
                 </div>
 
@@ -416,6 +534,8 @@ export default function GeeksforGeeksPage() {
                     currentStreak={currentStreak}
                     streakDays={streakDays}
                     totalSolved={totalSolved}
+                    isLight={isLight}
+                    brandColors={brandColors}
                   />
                 </div>
               </div>

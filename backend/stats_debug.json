@@ -1069,7 +1069,7 @@
     "platform": "geeksforgeeks",
     "__v": 0,
     "createdAt": "2026-05-31T11:06:44.180Z",
-    "lastSyncedAt": "2026-05-31T11:07:58.712Z",
+    "lastSyncedAt": "2026-05-31T11:20:03.112Z",
     "rating": 144,
     "stats": {
       "username": "lalitmodiog7e",
@@ -1101,7 +1101,10 @@
           "easy": 15,
           "medium": 18,
           "hard": 6,
+          "basic": 8,
+          "school": 0,
           "score": 144,
+          "instituteRank": 0,
           "countryRank": 0,
           "globalRank": 0,
           "name": "lalitmodiog7e",
@@ -1115,12 +1118,12 @@
         "highestRating": 144,
         "resolutionDetails": {
           "strategyUsed": "primary",
-          "timestamp": "2026-05-31T11:07:58.618Z"
+          "timestamp": "2026-05-31T11:20:02.875Z"
         }
       }
     },
     "totalSolved": 47,
-    "updatedAt": "2026-05-31T11:07:58.713Z",
+    "updatedAt": "2026-05-31T11:20:03.113Z",
     "username": "lalitmodiog7e"
   }
 ]
