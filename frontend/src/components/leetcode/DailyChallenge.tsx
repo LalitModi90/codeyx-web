@@ -10,6 +10,13 @@ interface DailyChallengeProps {
   completed?: boolean;
   rewardPoints?: number;
   problemUrl?: string;
+  platformName?: string;
+  brandColors?: {
+    orange: string;
+    yellow: string;
+    accent: string;
+    card: string;
+  };
 }
 
 export default function DailyChallenge({
@@ -17,7 +24,14 @@ export default function DailyChallenge({
   difficulty = "Medium",
   completed = false,
   rewardPoints = 10,
-  problemUrl = "https://leetcode.com/problems/course-schedule-ii/"
+  problemUrl = "https://leetcode.com/problems/course-schedule-ii/",
+  platformName = "LeetCode",
+  brandColors = {
+    orange: '#FFA116',
+    yellow: '#FFD43B',
+    accent: '#FF8C00',
+    card: 'bg-[#0B1023]/80 border-white/[0.08] backdrop-blur-xl',
+  }
 }: DailyChallengeProps) {
   const [timeLeft, setTimeLeft] = useState('16h 00m 00s');
   const [showHint, setShowHint] = useState(false);
@@ -41,7 +55,7 @@ export default function DailyChallenge({
     return () => clearInterval(timer);
   }, []);
 
-  // Dynamically map actual LeetCode metadata, topic tags, and tips based on the challenge title!
+  // Dynamically map actual platform metadata, topic tags, and tips based on the challenge title!
   const challengeMeta = useMemo(() => {
     const title = (challengeTitle || "").toLowerCase();
     if (title.includes("special characters")) {
@@ -63,30 +77,33 @@ export default function DailyChallenge({
       };
     }
     return {
-      tags: ["Algorithms", "Problem Solving", "LeetCode"],
+      tags: ["Algorithms", "Problem Solving", platformName],
       acceptance: "52.4%",
       category: "General Practice",
       complexity: "O(N) Optimal target",
       hint: "Analyze base edge cases, identify pattern matches, and consider dynamic programming or hash mapping to optimize lookup times."
     };
-  }, [challengeTitle]);
-
-  const brandColors = {
-    orange: '#FFA116',
-    yellow: '#FFD43B',
-    accent: '#FF8C00',
-    card: 'bg-[#0B1023]/80 border-white/[0.08] backdrop-blur-xl',
-  };
+  }, [challengeTitle, platformName]);
 
   return (
     <div className={`p-6 rounded-2xl border ${brandColors.card} shadow-lg relative overflow-hidden h-full flex flex-col justify-between min-h-[360px]`}>
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-orange-500/10 to-transparent blur-2xl rounded-full" />
+      <div 
+        className="absolute top-0 right-0 w-32 h-32 blur-2xl rounded-full pointer-events-none" 
+        style={{ background: `radial-gradient(circle at 100% 0%, ${brandColors.orange}1a, transparent)` }}
+      />
 
       <div className="space-y-4">
         {/* Top Header Row */}
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-[#FFA116] text-[8px] font-extrabold uppercase tracking-widest">
-            <Flame className="w-2.5 h-2.5 animate-pulse" />
+          <div 
+            className="flex items-center gap-1 px-2.5 py-0.5 rounded border text-[8px] font-extrabold uppercase tracking-widest"
+            style={{
+              backgroundColor: `${brandColors.orange}1a`,
+              borderColor: `${brandColors.orange}33`,
+              color: brandColors.orange
+            }}
+          >
+            <Flame className="w-2.5 h-2.5 animate-pulse" style={{ color: brandColors.orange }} />
             <span>Daily Challenge</span>
           </div>
 
@@ -113,7 +130,7 @@ export default function DailyChallenge({
             </span>
 
             <span className="text-[9px] text-gray-500 font-bold flex items-center gap-0.5">
-              <Zap size={10} className="text-[#FFA116]" />
+              <Zap size={10} style={{ color: brandColors.orange }} />
               <span>+{rewardPoints} Points</span>
             </span>
 
@@ -147,7 +164,7 @@ export default function DailyChallenge({
             className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all text-left group"
           >
             <div className="flex items-center gap-1.5 text-gray-400 group-hover:text-white transition-colors text-[9px] font-black uppercase tracking-wider">
-              <Lightbulb size={11} className="text-[#FFA116]" />
+              <Lightbulb size={11} style={{ color: brandColors.orange }} />
               <span>AI Prep Hint</span>
             </div>
             <ChevronDown 
@@ -167,8 +184,11 @@ export default function DailyChallenge({
               >
                 <div className="mt-2 p-3 rounded-xl bg-[#090C1B] border border-white/[0.04] text-[10px] text-gray-400 space-y-2 leading-relaxed">
                   <p>{challengeMeta.hint}</p>
-                  <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-wider text-orange-400 pt-1 border-t border-white/[0.03]">
-                    <span>Target Target Complexity</span>
+                  <div 
+                    className="flex items-center justify-between text-[8px] font-black uppercase tracking-wider pt-1 border-t border-white/[0.03]"
+                    style={{ color: brandColors.orange }}
+                  >
+                    <span>Target Complexity</span>
                     <span>{challengeMeta.complexity}</span>
                   </div>
                 </div>
@@ -178,8 +198,14 @@ export default function DailyChallenge({
         </div>
 
         {/* Streak bonus announcement */}
-        <div className="p-2.5 rounded-xl bg-gradient-to-r from-orange-500/5 to-transparent border-l border-orange-500/20 text-[9px] text-gray-400 flex items-center gap-2">
-          <Award size={12} className="text-[#FFA116] shrink-0" />
+        <div 
+          className="p-2.5 rounded-xl border-l text-[9px] text-gray-400 flex items-center gap-2"
+          style={{ 
+            borderLeftColor: brandColors.orange,
+            backgroundImage: `linear-gradient(to right, ${brandColors.orange}0c, transparent)`
+          }}
+        >
+          <Award size={12} style={{ color: brandColors.orange }} className="shrink-0" />
           <span>Complete this today to lock in your active coding streak!</span>
         </div>
       </div>
@@ -201,7 +227,11 @@ export default function DailyChallenge({
           href={problemUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="px-4 py-2 text-[9px] font-black tracking-widest uppercase rounded-xl bg-[#FFA116] hover:bg-[#FFA116]/80 text-black flex items-center gap-1.5 transition-all shadow-md shadow-orange-500/10 hover:shadow-orange-500/20 shrink-0"
+          className="px-4 py-2 text-[9px] font-black tracking-widest uppercase rounded-xl text-black flex items-center gap-1.5 transition-all shadow-md shrink-0 hover:opacity-90"
+          style={{ 
+            backgroundColor: brandColors.orange,
+            boxShadow: `0 4px 12px ${brandColors.orange}26`
+          }}
         >
           <span>Solve Challenge</span>
           <ExternalLink size={10} />

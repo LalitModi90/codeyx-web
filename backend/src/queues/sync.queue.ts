@@ -13,7 +13,7 @@ export const syncQueue = isRedisAvailable
     } as any;
 
 // Helper to add a sync job
-export const addSyncJob = async (userId: string, platform: string, data?: any) => {
+export const addSyncJob = async (userId: string, platform: string, data?: any, delayMs = 0) => {
   await syncQueue.add(
     'sync-platform',
     { userId, platform, data },
@@ -23,8 +23,9 @@ export const addSyncJob = async (userId: string, platform: string, data?: any) =
         type: 'exponential',
         delay: 5000, // 5s, 25s, 125s
       },
+      delay: delayMs,
       removeOnComplete: true, // Keep redis memory clean
     }
   );
-  console.log(`Job added to queue: Sync ${platform} for User ${userId}`);
+  console.log(`Job added to queue: Sync ${platform} for User ${userId} (delayed by ${delayMs}ms)`);
 };

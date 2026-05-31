@@ -30,6 +30,7 @@ const KNOWN_PLATFORM_DOMAINS = [
   'atcoder.jp',
   'neetcode.io',
   'codingninjas.com',
+  'naukri.com',
   'interviewbit.com',
   'spoj.com',
   'cses.fi',
@@ -143,7 +144,7 @@ function isKnownPlatformDomain(url: string): boolean {
 
 // Priority order for picking the "primary" external link
 const EXTERNAL_LINK_PRIORITY = [
-  'leetcode', 'geeksforgeeks', 'codeforces', 'hackerrank',
+  'leetcode', 'geeksforgeeks', 'gfg', 'codeforces', 'hackerrank',
   'codechef', 'neetcode', 'interviewbit', 'atcoder',
   'codingninjas', 'spoj', 'cses',
 ];
@@ -200,7 +201,7 @@ export default function PlatformLinks({
   }
 
   const addIfExists = (def: PlatformDefinition, url: string) => {
-    if (!url) return;
+    if (!url || url === '#') return;
     const key = def.key + ':' + url;
     if (seen.has(key)) return;
     seen.add(key);
@@ -211,7 +212,13 @@ export default function PlatformLinks({
   //    EACH platform gets its OWN icon and its OWN URL from `links[platformKey]`
   if (links && typeof links === 'object') {
     for (const def of PLATFORM_DEFINITIONS) {
-      const val = links[def.key];
+      let val = links[def.key];
+      if (def.key === 'codingninjas' && !val) {
+        val = links['codestudio'] || links['code360'] || links['codingninjas'];
+      }
+      if (def.key === 'geeksforgeeks' && !val) {
+        val = links['gfg'] || links['geeksforgeeks'];
+      }
       if (val) addIfExists(def, val);
     }
   }
@@ -220,7 +227,10 @@ export default function PlatformLinks({
   if (link) {
     const platformLower = (platform || '').toLowerCase();
     const matchedDef = PLATFORM_DEFINITIONS.find(
-      d => d.key === platformLower || d.label.toLowerCase() === platformLower
+      d => d.key === platformLower || 
+           d.label.toLowerCase() === platformLower ||
+           (d.key === 'codingninjas' && (platformLower === 'codestudio' || platformLower === 'code360')) ||
+           (d.key === 'geeksforgeeks' && platformLower === 'gfg')
     );
     if (matchedDef) {
       addIfExists(matchedDef, link);

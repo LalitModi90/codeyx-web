@@ -175,12 +175,14 @@ export const forceSyncAll = async (req: Request, res: Response) => {
     }
 
     let queuedCount = 0;
+    const staggerDelayMs = 5000; // Stagger each task by 5 seconds
     const errors: string[] = [];
 
     for (const stat of allStats) {
       try {
         if (stat.username) {
-          await addSyncJob(stat.userId.toString(), stat.platform, stat.username);
+          const currentDelay = queuedCount * staggerDelayMs;
+          await addSyncJob(stat.userId.toString(), stat.platform, stat.username, currentDelay);
           queuedCount++;
         }
       } catch (e: any) {

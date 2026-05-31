@@ -40,5 +40,7 @@ router.get('/codeforces/:username', (req, res) => handleAggregation(req, res, 'c
 router.get('/codechef/:username', (req, res) => handleAggregation(req, res, 'codechef'));
 router.get('/hackerrank/:username', (req, res) => handleAggregation(req, res, 'hackerrank'));
 router.get('/atcoder/:username', (req, res) => handleAggregation(req, res, 'atcoder'));
+router.get('/geeksforgeeks/:username', (req, res) => handleAggregation(req, res, 'geeksforgeeks'));
+router.get('/gfg/:username', (req, res) => handleAggregation(req, res, 'gfg'));
 
 export default router;

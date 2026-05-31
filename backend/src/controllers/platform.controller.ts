@@ -8,10 +8,15 @@ import * as fs from 'fs';
 export const triggerPlatformSync = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).auth?.userId || req.body.userId || 'demo-user-123';
-    const { platform, platformUsername } = req.body;
+    let { platform, platformUsername } = req.body;
 
     if (!platform) {
       return res.status(400).json({ success: false, message: 'Platform name is required' });
+    }
+
+    platform = platform.toLowerCase();
+    if (platform === 'gfg') {
+      platform = 'geeksforgeeks';
     }
 
     let username = platformUsername;
@@ -22,6 +27,21 @@ export const triggerPlatformSync = async (req: Request, res: Response) => {
       } else {
         username = userId;
       }
+    }
+
+    // Auto-extract and clean handle if username is a full profile URL or contains queries/hashes
+    if (username) {
+      username = username.trim();
+      username = username.split('?')[0].split('#')[0].trim();
+      if (username.toLowerCase().includes('geeksforgeeks.org/profile/')) {
+        const parts = username.split(/geeksforgeeks\.org\/profile\//i);
+        if (parts[1]) {
+          username = parts[1].split('/')[0].trim();
+        }
+      } else if (username.startsWith('http') && username.includes('/')) {
+        username = username.split('/').filter(Boolean).pop() || username;
+      }
+      username = username.replace(/[^a-zA-Z0-9_-]/g, '');
     }
 
     // Use FallbackManager for resilient, multi-tiered live profile resolution!
@@ -128,14 +148,17 @@ export const triggerPlatformSync = async (req: Request, res: Response) => {
 
 export const getPlatformStats = async (req: Request, res: Response) => {
   try {
-    const { platform, userId } = req.query;
+    let { platform, userId } = req.query;
     if (!platform || !userId) {
       return res.status(400).json({ success: false, message: 'Platform and userId are required' });
     }
 
+    const platformStr = String(platform).toLowerCase();
+    const normalizedPlatform = platformStr === 'gfg' ? 'geeksforgeeks' : platformStr;
+
     const stats = await PlatformStats.findOne({ 
       userId: userId as string, 
-      platform: platform as any
+      platform: normalizedPlatform as any
     });
     
     return res.status(200).json(
@@ -170,9 +193,14 @@ export const getAllPlatformStats = async (req: Request, res: Response) => {
 
 export const disconnectPlatform = async (req: Request, res: Response) => {
   try {
-    const { platform, userId } = req.body;
+    let { platform, userId } = req.body;
     if (!platform || !userId) {
       return res.status(400).json({ success: false, message: 'Platform and userId are required' });
+    }
+
+    platform = platform.toLowerCase();
+    if (platform === 'gfg') {
+      platform = 'geeksforgeeks';
     }
 
     await PlatformStats.findOneAndDelete({ userId, platform });

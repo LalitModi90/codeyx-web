@@ -297,6 +297,20 @@ export default function PublicProfilePage() {
       platformId: 'leetcode'
     },
     {
+      name: 'GeeksforGeeks',
+      iconColor: 'text-emerald-500',
+      primaryStatLabel: 'Problems Solved',
+      primaryStatValue: '0',
+      difficulty: { easy: 0, medium: 0, hard: 0 },
+      stats: [
+        { label: 'Coding Score', value: '—' },
+        { label: 'Global Rank', value: '—' },
+        { label: 'Streak', value: '—', color: 'text-emerald-400' }
+      ],
+      chartColor: '#2F8D46',
+      platformId: 'geeksforgeeks'
+    },
+    {
       name: 'Codeforces',
       iconColor: 'text-blue-500',
       primaryStatLabel: 'Problems Solved',
@@ -567,6 +581,26 @@ export default function PublicProfilePage() {
                   { label: 'Stars', value: stats.starsNum ? `${stats.starsNum} ★` : (stats.stars ? `${stats.stars}` : '—'), color: 'text-amber-500' },
                   { label: 'Global Rank', value: stats.globalRank ? `#${stats.globalRank.toLocaleString()}` : '—' },
                   { label: 'Highest Rating', value: stats.highestRating > 0 ? stats.highestRating.toString() : '—' }
+                ]
+              };
+            }
+
+            if (p.platformId === 'geeksforgeeks') {
+              const easy = stats.easy || stats.easySolved || 0;
+              const medium = stats.medium || stats.mediumSolved || 0;
+              const hard = stats.hard || stats.hardSolved || 0;
+              const score = stats.codingScore || stats.score || 0;
+
+              return {
+                ...p,
+                isConnected: true,
+                link: platformLink,
+                primaryStatValue: total.toLocaleString(),
+                difficulty: { easy, medium, hard },
+                stats: [
+                  { label: 'Coding Score', value: score > 0 ? score.toLocaleString() : '—' },
+                  { label: 'Global Rank', value: stats.globalRank ? `#${stats.globalRank.toLocaleString()}` : '—' },
+                  { label: 'Streak', value: stats.streak > 0 ? `${stats.streak} Days` : 'Active', color: 'text-emerald-400' }
                 ]
               };
             }

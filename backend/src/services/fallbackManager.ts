@@ -5,6 +5,7 @@ import { CodeforcesProvider } from '../providers/codeforces.provider';
 import { CodeChefProvider } from '../providers/codechef.provider';
 import { HackerRankProvider } from '../providers/hackerrank.provider';
 import { AtCoderProvider } from '../providers/atcoder.provider';
+import { GeeksforGeeksProvider } from '../providers/geeksforgeeks.provider';
 import { normalizeProfile } from '../adapters/normalizer';
 import { getCircuitBreaker } from '../utils/circuitBreaker';
 import { withRetry } from '../utils/retry';
@@ -22,6 +23,8 @@ export class FallbackManager {
     this.providers['codechef'] = new CodeChefProvider();
     this.providers['hackerrank'] = new HackerRankProvider();
     this.providers['atcoder'] = new AtCoderProvider();
+    this.providers['geeksforgeeks'] = new GeeksforGeeksProvider();
+    this.providers['gfg'] = new GeeksforGeeksProvider();
   }
 
   public static getInstance(): FallbackManager {

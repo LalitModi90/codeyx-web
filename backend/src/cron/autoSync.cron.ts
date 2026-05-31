@@ -3,10 +3,10 @@ import { User } from '../models/user.model';
 import { PlatformStats } from '../models/platformStats.model';
 import { addSyncJob } from '../queues/sync.queue';
 
-// This cron job runs every night at 2:00 AM
+// This cron job runs every 30 minutes
 export const initCronJobs = () => {
-  cron.schedule('0 2 * * *', async () => {
-    console.log('⏳ [CRON] Starting Nightly Auto-Sync for all users...');
+  cron.schedule('*/30 * * * *', async () => {
+    console.log('⏳ [CRON] Starting Auto-Sync for all users...');
 
     try {
       // 1. Fetch all users who have linked platforms
@@ -14,11 +14,13 @@ export const initCronJobs = () => {
       const activeStats = await PlatformStats.find({});
       
       let queuedCount = 0;
+      const staggerDelayMs = 5000; // Stagger each task by 5 seconds
 
       for (const stat of activeStats) {
-        // Push each sync task to BullMQ
-        // This ensures we don't crash our server and respect rate limits
-        await addSyncJob(stat.userId.toString(), stat.platform, stat.username);
+        // Push each sync task to BullMQ with an incremental stagger delay
+        // This ensures they execute separated in time and respect rate limits
+        const currentDelay = queuedCount * staggerDelayMs;
+        await addSyncJob(stat.userId.toString(), stat.platform, stat.username, currentDelay);
         queuedCount++;
       }
 

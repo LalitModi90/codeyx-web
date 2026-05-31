@@ -69,21 +69,9 @@ async function migrate() {
     const links = { ...(prob.links || {}) };
     let linksChanged = false;
 
-    // If `link` exists but `links.leetcode` is empty, fill it
-    if (existingLink && !links.leetcode) {
-      links.leetcode = existingLink;
-      linksChanged = true;
-    }
-
-    // Auto-generate LeetCode URL if missing
-    if (!links.leetcode && title) {
-      links.leetcode = PLATFORM_URLS.leetcode(title);
-      linksChanged = true;
-    }
-
-    // If platform is known, ensure that specific link is set
-    if (platform === 'leetcode' && existingLink && !links.leetcode) {
-      links.leetcode = existingLink;
+    // Set links only for the active matching platform or existing valid links
+    if (platform === 'leetcode' && (existingLink || !links.leetcode)) {
+      links.leetcode = existingLink || PLATFORM_URLS.leetcode(title);
       linksChanged = true;
     }
     if ((platform === 'geeksforgeeks' || platform === 'gfg') && !links.geeksforgeeks) {
@@ -106,14 +94,12 @@ async function migrate() {
       links.cses = existingLink;
       linksChanged = true;
     }
-
-    // Auto-generate NeetCode and InterviewBit links
-    if (!links.neetcode && title) {
-      links.neetcode = PLATFORM_URLS.neetcode(title);
+    if (platform === 'neetcode' && !links.neetcode) {
+      links.neetcode = existingLink || PLATFORM_URLS.neetcode(title);
       linksChanged = true;
     }
-    if (!links.interviewbit && title) {
-      links.interviewbit = PLATFORM_URLS.interviewbit(title);
+    if (platform === 'interviewbit' && !links.interviewbit) {
+      links.interviewbit = existingLink || PLATFORM_URLS.interviewbit(title);
       linksChanged = true;
     }
 

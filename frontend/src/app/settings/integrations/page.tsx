@@ -9,6 +9,7 @@ import { platformService } from '@/services/platform.service';
 
 const AVAILABLE_PLATFORMS = [
   { id: 'leetcode', name: 'LeetCode', color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
+  { id: 'geeksforgeeks', name: 'GeeksforGeeks', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
   { id: 'github', name: 'GitHub', color: 'text-gray-200', bg: 'bg-gray-200/10', border: 'border-gray-200/20' },
   { id: 'codeforces', name: 'Codeforces', color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
   { id: 'codechef', name: 'CodeChef', color: 'text-amber-600', bg: 'bg-amber-600/10', border: 'border-amber-600/20' },

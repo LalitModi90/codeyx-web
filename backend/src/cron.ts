@@ -27,6 +27,10 @@ export const startCronJobs = () => {
             
             for (const doc of stats) {
                 if (doc.platform && doc.username) {
+                    // Stagger execution by waiting 2-5 seconds randomly to avoid simultaneous scraping blocks
+                    const staggerDelay = Math.floor(Math.random() * 3000) + 2000;
+                    await new Promise(resolve => setTimeout(resolve, staggerDelay));
+
                     console.log(`[Platform Cron] Syncing ${doc.platform} for user @${doc.username}...`);
                     try {
                         const profile = await manager.resolveProfile(doc.platform, doc.username, true);
@@ -62,8 +66,8 @@ export const startCronJobs = () => {
     // Run contest refresh every 2 hours
     cron.schedule('0 */2 * * *', runRefresh);
 
-    // Run platform stats auto-sync every 6 hours
-    cron.schedule('0 */6 * * *', runPlatformSync);
+    // Run platform stats auto-sync every 30 minutes
+    cron.schedule('*/30 * * * *', runPlatformSync);
 
     // Trigger immediate background sync on startup to populate CodeChef & AtCoder
     runRefresh().catch(err => console.error('[Cron] Initial startup fetch failed:', err.message));
