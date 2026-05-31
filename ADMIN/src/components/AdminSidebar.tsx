@@ -12,6 +12,7 @@ import {
   MessageSquare, 
   Bell, 
   Settings,
+  GraduationCap,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 const sidebarLinks = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Users", href: "/users", icon: Users },
+  { name: "Universities", href: "/universities", icon: GraduationCap },
   { name: "DSA Sheets", href: "/sheets", icon: BookOpen },
   { name: "Projects", href: "/projects", icon: Briefcase },
   { name: "Contests", href: "/contests", icon: Trophy },

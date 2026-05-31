@@ -41,7 +41,7 @@ const popularCountries = [
 ];
 
 export default function OnboardingPage() {
-  const { profile, completeFullProfile } = useOnboarding();
+  const { profile, completeFullProfile, updateProfile } = useOnboarding();
   const { isLoaded, isSignedIn, user } = useUser();
 
   const [step, setStep] = useState(1);
@@ -749,7 +749,17 @@ export default function OnboardingPage() {
             </button>
 
             {submitError && (
-              <div className="text-xs text-amber-400 text-center mt-2">{submitError}</div>
+              <div className="flex flex-col items-center mt-2">
+                <div className="text-xs text-amber-400 text-center">{submitError}</div>
+                {submitError.toLowerCase().includes('username') && (
+                  <button
+                    onClick={() => updateProfile({ step1Complete: false })}
+                    className="mt-2 text-[11px] font-bold text-orange-400 hover:text-orange-300 underline underline-offset-2 transition-colors"
+                  >
+                    Change Username
+                  </button>
+                )}
+              </div>
             )}
 
             <button
